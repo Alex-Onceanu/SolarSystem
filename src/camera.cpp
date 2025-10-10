@@ -15,7 +15,7 @@ vec2 mousePos;
 Camera::Camera(GLFWwindow* __window)
     : window(__window)
 {
-    pos = vec3(0.0, 0.0, -2.0);
+    pos = vec3(0.0, 0.0, 0.0);
     glfwSetKeyCallback(window, glfwKeyCallback);
     glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
 
@@ -84,17 +84,15 @@ void Camera::update(float dt)
         glfwSetCursorPos(window, 0., 0.);
     }
 
-    theta -= mousePos * (0.02f * PI * dt);
-
-    mousePos = vec2(0.0, 0.0);
-
     // theta.y = std::max(-PI / 4.0f, std::min(theta.y, PI / 4.0f));
 
     vec3 speed = vec3(0.0, 0.0, 0.0);
 
+    // this code is right-handed, but OpenGl's NDC are left-handed for some reason
     if(isKeyPressed[0]) speed.z -= 1.0;
-    if(isKeyPressed[1]) speed.x -= 1.0;
     if(isKeyPressed[2]) speed.z += 1.0;
+
+    if(isKeyPressed[1]) speed.x -= 1.0;
     if(isKeyPressed[3]) speed.x += 1.0;
     if(isKeyPressed[5]) speed.y += 1.0;
     if(isKeyPressed[6]) speed.y -= 1.0;
@@ -102,10 +100,15 @@ void Camera::update(float dt)
     speed.normalized();
     speed *= speedRef;
 
-    vec3 direction = vec3(sinf(theta.x) * cosf(theta.y), sinf(-theta.y), -cosf(theta.x) * cosf(theta.y));
-    vec3 right = direction.cross(vec3(0., 1., 0.));
-    right.normalized();
+    vec3 direction = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
+    vec3 right = vec3(cosf(theta.x), 0., sinf(theta.x));
     vec3 up = right.cross(direction);
+
+    theta.x -= mousePos.x * (0.02f * PI * dt) * up.y;
+    theta.y -= mousePos.y * (0.02f * PI * dt);
+    mousePos = vec2(0.0, 0.0);
+
+    // std::cout << "front : " << direction << "\nright : " << right << "\nup : " << up << std::endl;
 
     pos += right * speed.x * dt;
     pos += up * speed.y * dt;

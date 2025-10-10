@@ -48,10 +48,16 @@ int main()
 
         auto inputData = Input::getInput();
 
+        glUniform3f(glGetUniformLocation(program, "sunPos"), 
+            inputData.sunPos[0], inputData.sunPos[1], inputData.sunPos[2]);
         glUniform3f(glGetUniformLocation(program, "sunColor"), 
             inputData.sunColor[0], inputData.sunColor[1], inputData.sunColor[2]);
         glUniform1f(glGetUniformLocation(program, "sunCoronaStrength"), 
             inputData.sunCoronaStrength);
+        glUniform3f(glGetUniformLocation(program, "planetPos"), 
+            inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]);
+        glUniform3f(glGetUniformLocation(program, "planetColor"), 
+            inputData.planetColor[0], inputData.planetColor[1], inputData.planetColor[2]);
 
         camera->update(dt);
 
