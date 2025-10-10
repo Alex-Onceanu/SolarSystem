@@ -38,10 +38,15 @@ InputData Input::getInput()
     ImGui::SetNextWindowPos(ImVec2(RESOLUTION_W - w, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
+
+    static InputData data{ .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 2.0 };
+
+    ImGui::ColorEdit3("sun color", data.sunColor);
+    ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 8.0);
+
+    
+
     ImGui::End();
-
-    InputData data{};
-
     return data;
 }
 

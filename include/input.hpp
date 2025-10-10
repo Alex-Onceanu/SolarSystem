@@ -4,7 +4,8 @@
 #include <GLFW/glfw3.h>
 
 struct InputData {
-
+    float sunColor[3];
+    float sunCoronaStrength;
 };
 
 class Input

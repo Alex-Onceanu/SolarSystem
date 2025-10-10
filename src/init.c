@@ -64,11 +64,6 @@ char *read_shader(const char *filename)
     return res;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
-
 void setupMesh()
 {
     float vertex[NB_VERTEX * ATTR_PER_VERTEX] = {
@@ -100,11 +95,20 @@ void setupMesh()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, NB_INDEX * sizeof(unsigned int), indices, GL_STATIC_DRAW);
 }
 
+// will only be used by framebuffer_size_callback to update aspect ratio in the shader
+unsigned int global_program;
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+    glUniform1f(glGetUniformLocation(global_program, "aspectRatio"), (float)(width) / (float)(height));
+}
+
 unsigned int init(GLFWwindow** window)
 {
     if (!glfwInit()) return 0;
 
-    *window = glfwCreateWindow(RESOLUTION_W, RESOLUTION_H, "This is not outer wilds", NULL, NULL);
+    *window = glfwCreateWindow(RESOLUTION_W, RESOLUTION_H, "This is not outer wilds yet", NULL, NULL);
     if (window == NULL)
     {
         printf("Error in glfwCreateWindow !\n");
@@ -113,8 +117,6 @@ unsigned int init(GLFWwindow** window)
     }
 
     glfwMakeContextCurrent(*window);
-    glfwSetFramebufferSizeCallback(*window, framebuffer_size_callback);
-
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -132,13 +134,15 @@ unsigned int init(GLFWwindow** window)
     // Fragment Shader, pour chaque pixel (gère la couleur en outre)
     char *fs_source = read_shader("../shaders/main.frag");
 
-    unsigned int shader = create_program(vs_source, fs_source);
-    glUseProgram(shader);
+    global_program = create_program(vs_source, fs_source);
+    glUseProgram(global_program);
+
+    glfwSetFramebufferSizeCallback(*window, framebuffer_size_callback);
 
     free(vs_source);
     free(fs_source);
 
     setupMesh();
 
-    return shader;
+    return global_program;
 }
