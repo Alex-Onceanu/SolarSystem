@@ -41,10 +41,12 @@ int main()
         nbFramesThisSecond++;
         if(timeSinceLastSecond >= 1.0f)
         {
-            // std::cout << "FPS : " << nbFramesThisSecond << std::endl;
+            std::cout << "FPS : " << nbFramesThisSecond << std::endl;
             nbFramesThisSecond = 0;
             lastSecondTime = currentTime;
         }
+
+        glUniform1f(glGetUniformLocation(program, "time"), elapsedTime);
 
         auto inputData = Input::getInput();
 
@@ -58,6 +60,8 @@ int main()
             inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]);
         glUniform3f(glGetUniformLocation(program, "planetColor"), 
             inputData.planetColor[0], inputData.planetColor[1], inputData.planetColor[2]);
+        glUniform1f(glGetUniformLocation(program, "noiseScale"), 
+            inputData.noiseScale);
 
         camera->update(dt);
 

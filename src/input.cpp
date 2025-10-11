@@ -39,8 +39,9 @@ InputData Input::getInput()
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
-    static InputData data{  .sunPos{ 0.,0.,5. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 2.0,
-                            .planetPos{ 0.,-3.,7. }, .planetColor{ 0.3,0.2,1. } };
+    static InputData data{  .sunPos{ -3.,4.,15. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 2.0,
+                            .planetPos{ 0.,-3.,37. }, .planetColor{ 0.3,0.2,1. }, 
+                            .noiseScale = 3.0 };
 
     ImGui::InputFloat3("sun position", data.sunPos);
     ImGui::ColorEdit3("sun color", data.sunColor);
@@ -48,6 +49,7 @@ InputData Input::getInput()
     
     ImGui::InputFloat3("planet position", data.planetPos);
     ImGui::ColorEdit3("planet color", data.planetColor);
+    ImGui::SliderFloat("noise scale", &data.noiseScale, 0.1, 20.0);
 
     ImGui::End();
     return data;

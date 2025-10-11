@@ -4,6 +4,12 @@
 #include <iostream>
 #include <cmath>
 
+template<typename T>
+inline float sign(const T& x)
+{
+    return x > 0. ? 1. : -1.;
+}
+
 struct vec2 {
     float x{}, y{};
     vec2() : x(0.), y(0.) {}
