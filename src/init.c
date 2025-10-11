@@ -11,6 +11,80 @@
 #define NB_INDEX 6
 
 
+
+// written in one of my previous projects 2 years ago
+unsigned char *read_ppm(const char *filename_ppm, int *width, int *height)
+{
+    FILE *fichier = fopen(filename_ppm, "r");
+    if (fichier == NULL)
+    {
+        printf("Can't find %s\n", filename_ppm);
+        return NULL;
+    }
+    if(fgetc(fichier) != 'P' || fgetc(fichier) != '6')
+    {
+        return NULL;
+    }
+    fgetc(fichier);
+    if(fgetc(fichier) == '#')
+    {
+        while(fgetc(fichier) != '\n');
+    }
+    else
+    {
+        fseek(fichier, -1, SEEK_CUR);
+    }
+
+    int max_color = 255;
+    if (fscanf(fichier, "%d %d %d", width, height, &max_color) != 3)
+    {
+        printf("Probleme de lecture du header ppm...");
+        fclose(fichier);
+        return NULL;
+    }
+    if (max_color != 255)
+    {
+        printf("Couleur ref doit etre 255, non ?\n");
+        fclose(fichier);
+        return NULL;
+    }
+
+    // Tout le fichier est lu d'un seul coup avec un fread approprié
+
+    int nb_px = (*width) * (*height); // rgb
+    unsigned char *res = malloc(3 * nb_px * sizeof(unsigned char));
+    fread(res, sizeof(unsigned char), 3 * nb_px, fichier);
+
+    fclose(fichier);
+    return res;
+}
+
+unsigned int init_texture(const char* path)
+{
+    int width, height;
+    unsigned char *data = read_ppm(path, &width, &height);
+
+    // Chaque texture chargée est associée à un uint, qu'on stocke dans un
+    // unsigned int[], ici comme il y en a 1 seul on envoie &texture
+    unsigned int texture_id;
+    // Génération du texture object
+    glGenTextures(1, &texture_id);
+
+    glActiveTexture(GL_TEXTURE0);
+
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+
+    // On attache une image 2d à un texture object
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    return texture_id;
+}
+
 unsigned int compile_shader(unsigned int type, const char *source)
 {
     unsigned int id = glCreateShader(type);

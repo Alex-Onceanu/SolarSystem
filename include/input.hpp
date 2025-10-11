@@ -10,6 +10,7 @@ struct InputData {
 
     float planetPos[3];
     float planetColor[3];
+    float fov;
 };
 
 class Input

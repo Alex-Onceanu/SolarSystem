@@ -14,6 +14,9 @@ int main()
 {
     GLFWwindow* window = nullptr;
     unsigned int program = init(&window);
+
+    auto earthTexture = init_texture("../assets/eart.ppm");
+
     Input::init(window);
     auto camera = std::make_unique<Camera>(window);
 
@@ -46,6 +49,11 @@ int main()
             lastSecondTime = currentTime;
         }
 
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, earthTexture);
+        unsigned int u_Texture = glGetUniformLocation(program, "earthTexture");
+        glUniform1i(u_Texture, 0);
+
         auto inputData = Input::getInput();
 
         glUniform3f(glGetUniformLocation(program, "sunPos"), 
@@ -58,6 +66,7 @@ int main()
             inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]);
         glUniform3f(glGetUniformLocation(program, "planetColor"), 
             inputData.planetColor[0], inputData.planetColor[1], inputData.planetColor[2]);
+        glUniform1f(glGetUniformLocation(program, "fov"), inputData.fov * 3.1415 / 180.);
 
         camera->update(dt);
 

@@ -10,6 +10,10 @@
 extern "C" {
 #endif
 
+unsigned char *read_ppm(const char *filename_ppm, int *width, int *height);
+
+unsigned int init_texture(const char* path);
+
 // Renvoie un shader en c_str à partir de son fichier source
 char *read_shader(const char *filename);
 // Compile un shader (donc l'envoie à OpenGL) à partir du code source en c_str

@@ -84,7 +84,6 @@ void Camera::update(float dt)
         glfwSetCursorPos(window, 0., 0.);
     }
 
-    // theta.y = std::max(-PI / 4.0f, std::min(theta.y, PI / 4.0f));
 
     vec3 speed = vec3(0.0, 0.0, 0.0);
 
@@ -104,8 +103,9 @@ void Camera::update(float dt)
     vec3 right = vec3(cosf(theta.x), 0., sinf(theta.x));
     vec3 up = right.cross(direction);
 
-    theta.x -= mousePos.x * (0.02f * PI * dt) * up.y;
+    theta.x -= mousePos.x * (0.02f * PI * dt);
     theta.y -= mousePos.y * (0.02f * PI * dt);
+    theta.y = std::max(-PI / 2.0f + 0.0001f, std::min(theta.y, PI / 2.0f - 0.0001f));
     mousePos = vec2(0.0, 0.0);
 
     // std::cout << "front : " << direction << "\nright : " << right << "\nup : " << up << std::endl;
