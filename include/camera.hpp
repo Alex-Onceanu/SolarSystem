@@ -16,11 +16,12 @@ public:
     static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+    static void glfwCharCallback(GLFWwindow* window, unsigned int c);
 private:
     GLFWwindow* window{};
 
     vec3 pos{};
-    const float speedRef = 10.0;
+    const float speedRef = 20.0;
 
     vec2 theta{};
 };

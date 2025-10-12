@@ -3,6 +3,7 @@
 layout(location = 0) in vec2 vFragPos;
 layout(location = 0) out vec4 outColor;
 
+uniform float time;
 uniform float fov;
 
 uniform vec3 cameraPos;
@@ -18,6 +19,12 @@ uniform vec3 planetColor;
 
 uniform sampler2D earthTexture;
 
+uniform float NB_STEPS_i;
+uniform float NB_STEPS_j;
+uniform float atmosFalloff;
+uniform float atmosRadius;
+uniform vec3 atmosColor;
+
 mat2 rot2D(float theta)
 {
     return mat2(vec2(cos(theta), -sin(theta)), vec2(sin(theta), cos(theta)));
@@ -28,7 +35,7 @@ vec2 raySphere(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius)
 {
     vec3 p = rayPos - sphPos;
     float delta = 4. * (dot(p, rayDir) * dot(p, rayDir) - dot(rayDir, rayDir) * (dot(p, p) - radius * radius));
-    if(delta < 0.) return vec2(1., -1.);
+    if(delta < 0.) return vec2(1e5, -1e5);
     return vec2((-2. * dot(p, rayDir) - sqrt(delta)) / (2. * dot(rayDir, rayDir)), 
                 (-2. * dot(p, rayDir) + sqrt(delta)) / (2. * dot(rayDir, rayDir)));
 }
@@ -44,16 +51,92 @@ float raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
 vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, vec3 clr)
 {
     vec3 d = (pos - spherePos) / radius;
+    d.xz *= rot2D(0.02 * time);
     vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
 
-    return max(0., dot(d, normalize(lightSource - pos))) * texture(earthTexture, uv).gbr;
+    return max(0.1, dot(d, normalize(lightSource - pos))) * texture(earthTexture, uv).gbr;
+}
+
+float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
+
+float noise(vec3 p){
+    vec3 a = floor(p);
+    vec3 d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+
+    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = perm(b.xyxy);
+    vec4 k2 = perm(k1.xyxy + b.zzww);
+
+    vec4 c = k2 + a.zzzz;
+    vec4 k3 = perm(c);
+    vec4 k4 = perm(c + 1.0);
+
+    vec4 o1 = fract(k3 * (1.0 / 41.0));
+    vec4 o2 = fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
 vec3 background(vec3 rayDir)
 {
-    // Distant stars here
-    
-    return vec3(0., 0., 0.);
+    vec3 d = normalize(rayDir);
+    return vec3(step(0.96, noise(500. * d)));
+}
+
+float densityAtPoint(vec3 where, vec3 planetPos, float planetRadius)
+{
+    float h = length(where - planetPos) - planetRadius;
+    float h01 = h / atmosRadius;
+    return exp(-h01 * atmosFalloff) * (1. - h01);
+}
+
+float opticalDepth(vec3 rayDir, vec3 rayPos, float rayLength, float nb_steps, vec3 planetPos, float planetRadius)
+{
+    vec3 p = rayPos;
+    float dt = rayLength / nb_steps;
+    float opticalDepth = 0.;
+
+    for(float t = dt; t < rayLength; t += dt)
+    {
+        p = rayPos + t * rayDir;
+        opticalDepth += dt * densityAtPoint(p, planetPos, planetRadius);
+    }
+
+    return opticalDepth;
+}
+
+vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radius, vec3 lightSource, vec3 originalColor)
+{
+    vec3 totalLight = vec3(0.);
+    float iOpticalDepth = 0.0;
+    float toEyeOpticalDepth = 0.;
+
+    // float mu = dot(rayDir, normalize(lightSource - start));
+    // float phase = 3.0 * (1.0 + mu * mu) / (16.0 * 3.14159265); // less scattering when orthogonal
+
+    float idt = dist / NB_STEPS_i;
+    for(float t = idt; t <= dist; t += idt)
+    {
+        vec3 p = start + t * rayDir;
+        vec3 toLight = normalize(lightSource - p);
+        float height = length(p - planetPos) - radius;
+        float rayLengthToSky = raySphere(p, toLight, planetPos, radius + atmosRadius).y;
+
+        float iOpticalDepth = opticalDepth(toLight, p, rayLengthToSky, NB_STEPS_j, planetPos, radius);
+        toEyeOpticalDepth = opticalDepth(-rayDir, p, t, NB_STEPS_j, planetPos, radius);
+        vec3 transmittance = exp(-(iOpticalDepth + toEyeOpticalDepth) * atmosColor);
+        float localDensity = densityAtPoint(p, planetPos, radius);
+
+        totalLight += localDensity * transmittance * atmosColor * idt;
+    }
+
+    return totalLight + exp(-toEyeOpticalDepth) * originalColor;
 }
 
 vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
@@ -62,34 +145,43 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
     vec3 planets[NB_PLANETS] = { planetPos };
 
     float tMin = 1e5;
+    float tToPlanet = 1e5;
     vec3 argmin = background(rayDir);
 
-    // float md = raySphereMinDist(rayPos, rayDir, sunPos, 1.0) + 1.;
-    // argmin += sunColor * smoothstep(0., 1.0, 1.0 / (md * md));
-
+    float planetRadius = 60.0;
     for(int i = 0; i < NB_PLANETS; i++)
     {
-        vec2 planet = raySphere(rayPos, rayDir, planets[i], 10.0);
-        if(planet.y > planet.x)
+        vec2 tPlanet = raySphere(rayPos, rayDir, planets[i], planetRadius);
+        if(tPlanet.y > tPlanet.x && tPlanet.x < tMin && tPlanet.y >= 0.)
         {
-            float t = planet.x;
-            if(t < tMin && t >= 0.)
-            {
-                tMin = t;
-                argmin = shadePlanet(rayDir, rayPos + t * rayDir, planets[i], 10.0, sunPos, planetColor);
-            }
+            tMin = tPlanet.x;
+            tToPlanet = tPlanet.x;
+            argmin = shadePlanet(rayDir, rayPos + tPlanet.x * rayDir, planets[i], planetRadius, sunPos, planetColor);
         }
     }
 
-    vec2 sun = raySphere(rayPos, rayDir, sunPos, 1.0);
-    if(sun.y > sun.x)
+    vec2 corona = raySphere(rayPos, rayDir, sunPos, sunCoronaStrength + 10.);
+    if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
     {
-        float t = sun.x;
-        if(t < tMin && t >= 0.)
+        vec2 sun = raySphere(rayPos, rayDir, sunPos, 10.0);
+        if(sun.y > sun.x && sun.x < tMin && sun.y >= 0.)
         {
-            tMin = t;
-            argmin = sunCoronaStrength * sunColor;
+            tMin = sun.x;
+            argmin = 2.0 * sunColor;
         }
+        else
+        {
+            float md = (1.0 / 10.) * raySphereMinDist(rayPos, rayDir, sunPos, 10.) + 1.;
+            float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
+            argmin = light * sunColor + (1.0 - light) * argmin;
+        }
+    }
+
+    vec2 tAtmos = raySphere(rayPos, rayDir, planets[0], planetRadius + atmosRadius);
+    float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
+    if(dstThroughAtmosphere > 0.)
+    {
+        return atmosphere(rayDir, rayPos + tAtmos.x * rayDir, dstThroughAtmosphere, planets[0], planetRadius, sunPos, argmin);
     }
 
     return argmin;
@@ -106,6 +198,6 @@ void main()
 
     float distToScreen = length(vec3(uv.x, uv.y, 2. / tan(0.5 * fov)));
     vec3 totalLight = raytraceMap(rayDir, cameraPos + distToScreen * rayDir);
-    
+
     outColor = vec4(totalLight, 1.0);
 }

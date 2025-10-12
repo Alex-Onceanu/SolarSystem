@@ -34,22 +34,32 @@ InputData Input::getInput()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    const int w = 240, h = 160;
-    ImGui::SetNextWindowPos(ImVec2(RESOLUTION_W - w, 0));
+    const int w = 360, h = 460;
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
-    static InputData data{  .sunPos{ 0.,0.,8. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 2.0,
-                            .planetPos{ 0.,-3.,27. }, .planetColor{ 0.3,0.2,1. }, .fov = 60. };
+    static InputData data{  .sunPos{ -10.,30.,260. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 30.0,
+                            .planetPos{ 0.,-60.,50. }, .planetColor{ 0.3,0.2,1. }, .fov = 60.,
+                            .nb_steps_i = 14., .nb_steps_j = 6.,
+                            .atmosRadius = 18., .atmosFalloff = 18., .atmosScattering = 1.,
+                            .atmosColor{700., 530., 440.} };
 
     ImGui::SliderFloat("fov", &data.fov, 10.0, 120.0);
 
-    ImGui::InputFloat3("sun position", data.sunPos);
+    ImGui::SliderFloat3("sun position", data.sunPos, -500., 500.);
     ImGui::ColorEdit3("sun color", data.sunColor);
-    ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 8.0);
+    ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 30.0);
     
-    ImGui::InputFloat3("planet position", data.planetPos);
+    ImGui::SliderFloat3("planet position", data.planetPos, -500., 500.);
     ImGui::ColorEdit3("planet color", data.planetColor);
+    
+    ImGui::SliderFloat("atmos steps i", &data.nb_steps_i, 0., 30.);
+    ImGui::SliderFloat("atmos steps j", &data.nb_steps_j, 0., 30.);
+    ImGui::SliderFloat("atmos radius", &data.atmosRadius, 0., 50.0);
+    ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 1., 50.0);
+    ImGui::SliderFloat("atmos scattering", &data.atmosScattering, 0., 10.);
+    ImGui::SliderFloat3("atmos λ (nm)", data.atmosColor, 400., 800.);
 
     ImGui::End();
     return data;

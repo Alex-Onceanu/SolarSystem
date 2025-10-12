@@ -18,6 +18,7 @@ Camera::Camera(GLFWwindow* __window)
     pos = vec3(0.0, 0.0, 0.0);
     glfwSetKeyCallback(window, glfwKeyCallback);
     glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
+    glfwSetCharCallback(window, glfwCharCallback);
 
     glfwSetCursorPosCallback(window, mouseMoveCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -29,11 +30,18 @@ Camera::Camera(GLFWwindow* __window)
     }
 }
 
-void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+void Camera::glfwCharCallback(GLFWwindow* window, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
+    io.AddInputCharacter(c);
+}
+
+void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    if(!isKeyPressed[4] and shouldHideCursor) return;
+
+    ImGuiIO& io = ImGui::GetIO();
     io.AddMouseButtonEvent(button, action);
-    if(io.WantCaptureMouse) return;
 }
 
 void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -58,12 +66,13 @@ void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int acti
 }
 void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.AddMousePosEvent(xpos, ypos);
-    if(io.WantCaptureMouse) return;
-
-    if(isKeyPressed[4] or not shouldHideCursor) return;
-    mousePos.x = static_cast<float>(xpos), mousePos.y = static_cast<float>(ypos);
+    if(isKeyPressed[4] or not shouldHideCursor)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddMousePosEvent(xpos, ypos);
+    }
+    else 
+        mousePos.x = static_cast<float>(xpos), mousePos.y = static_cast<float>(ypos);
 }
 
 void Camera::update(float dt)

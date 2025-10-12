@@ -11,6 +11,13 @@ struct InputData {
     float planetPos[3];
     float planetColor[3];
     float fov;
+
+    float nb_steps_i;
+    float nb_steps_j;
+    float atmosRadius;
+    float atmosFalloff;
+    float atmosScattering;
+    float atmosColor[3];
 };
 
 class Input

@@ -44,7 +44,7 @@ int main()
         nbFramesThisSecond++;
         if(timeSinceLastSecond >= 1.0f)
         {
-            // std::cout << "FPS : " << nbFramesThisSecond << std::endl;
+            std::cout << "FPS : " << nbFramesThisSecond << std::endl;
             nbFramesThisSecond = 0;
             lastSecondTime = currentTime;
         }
@@ -55,7 +55,7 @@ int main()
         glUniform1i(u_Texture, 0);
 
         auto inputData = Input::getInput();
-
+        glUniform1f(glGetUniformLocation(program, "time"), elapsedTime);
         glUniform3f(glGetUniformLocation(program, "sunPos"), 
             inputData.sunPos[0], inputData.sunPos[1], inputData.sunPos[2]);
         glUniform3f(glGetUniformLocation(program, "sunColor"), 
@@ -67,6 +67,16 @@ int main()
         glUniform3f(glGetUniformLocation(program, "planetColor"), 
             inputData.planetColor[0], inputData.planetColor[1], inputData.planetColor[2]);
         glUniform1f(glGetUniformLocation(program, "fov"), inputData.fov * 3.1415 / 180.);
+
+
+        glUniform1f(glGetUniformLocation(program, "NB_STEPS_i"), inputData.nb_steps_i);
+        glUniform1f(glGetUniformLocation(program, "NB_STEPS_j"), inputData.nb_steps_j);
+        glUniform1f(glGetUniformLocation(program, "atmosRadius"), inputData.atmosRadius);
+        glUniform1f(glGetUniformLocation(program, "atmosFalloff"), inputData.atmosFalloff);
+        glUniform3f(glGetUniformLocation(program, "atmosColor"), 
+            powf(400. / inputData.atmosColor[0], 4) * inputData.atmosScattering, 
+            powf(400. / inputData.atmosColor[1], 4) * inputData.atmosScattering, 
+            powf(400. / inputData.atmosColor[2], 4) * inputData.atmosScattering);
 
         camera->update(dt);
 
