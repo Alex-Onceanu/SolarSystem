@@ -78,6 +78,9 @@ int main()
             powf(400. / inputData.atmosColor[1], 4) * inputData.atmosScattering, 
             powf(400. / inputData.atmosColor[2], 4) * inputData.atmosScattering);
 
+        glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
+        glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
+
         camera->update(dt);
 
         vec3 camPos = camera->getPos();

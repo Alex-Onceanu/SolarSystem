@@ -25,10 +25,114 @@ uniform float atmosFalloff;
 uniform float atmosRadius;
 uniform vec3 atmosColor;
 
+uniform float mountainAmplitude;
+uniform float mountainFrequency;
+
 mat2 rot2D(float theta)
 {
     return mat2(vec2(cos(theta), -sin(theta)), vec2(sin(theta), cos(theta)));
 }
+
+
+float rand(vec2 n) { 
+	return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+}
+
+float noise(vec2 p){
+	vec2 ip = floor(p);
+	vec2 u = fract(p);
+	u = u*u*(3.0-2.0*u);
+	
+	float res = mix(
+		mix(rand(ip),rand(ip+vec2(1.0,0.0)),u.x),
+		mix(rand(ip+vec2(0.0,1.0)),rand(ip+vec2(1.0,1.0)),u.x),u.y);
+	return res*res;
+}
+
+float fbm(vec2 x)
+{    
+    float G = 1.0 / 2.71828; // H = 1 for yellow noise
+    float f = 1.0;
+    float a = 1.0;
+    float t = 0.0;
+    int numOctaves = 4;
+    for( int i=0; i<numOctaves; i++ )
+    {
+        t += a*noise(f*x);
+        f *= 2.0;
+        a *= G;
+    }
+    return t;
+}
+
+// wikipedia.org
+vec2 cubeMapUV(vec3 p)
+{
+    float x = p.x, y = p.y, z = p.z;
+
+    float absX = abs(x);
+    float absY = abs(y);
+    float absZ = abs(z);
+
+    int isXPositive = x > 0 ? 1 : 0;
+    int isYPositive = y > 0 ? 1 : 0;
+    int isZPositive = z > 0 ? 1 : 0;
+
+    float maxAxis, uc, vc;
+
+    // Positive X
+    if (isXPositive == 1 && absX >= absY && absX >= absZ) {
+    // u (0 to 1) goes from +z to −z
+    // v (0 to 1) goes from −y to +y
+    maxAxis = absX;
+    uc = -z;
+    vc = y;
+    }
+    // Negative X
+    if (isXPositive == 0 && absX >= absY && absX >= absZ) {
+    // u (0 to 1) goes from −z to +z
+    // v (0 to 1) goes from −y to +y
+    maxAxis = absX;
+    uc = z;
+    vc = y;
+    }
+    // Positive Y
+    if (isYPositive == 1 && absY >= absX && absY >= absZ) {
+    // u (0 to 1) goes from −x to +x
+    // v (0 to 1) goes from +z to −z
+    maxAxis = absY;
+    uc = x;
+    vc = -z;
+    }
+    // Negative Y
+    if (isYPositive == 0 && absY >= absX && absY >= absZ) {
+    // u (0 to 1) goes from −x to +x
+    // v (0 to 1) goes from −z to +z
+    maxAxis = absY;
+    uc = x;
+    vc = z;
+    }
+    // Positive Z
+    if (isZPositive == 1 && absZ >= absX && absZ >= absY) {
+    // u (0 to 1) goes from −x to +x
+    // v (0 to 1) goes from −y to +y
+    maxAxis = absZ;
+    uc = x;
+    vc = y;
+    }
+    // Negative Z
+    if (isZPositive == 0 && absZ >= absX && absZ >= absY) {
+    // u (0 to 1) goes from +x to −x
+    // v (0 to 1) goes from −y to +y
+    maxAxis = absZ;
+    uc = -x;
+    vc = y;
+    }
+
+    // Convert range from −1 to 1 to 0 to 1
+    return vec2(0.5f * (uc / maxAxis + 1.0f), 0.5f * (vc / maxAxis + 1.0f));
+}
+
 
 // Returns .x > .y if no intersection
 vec2 raySphere(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius)
@@ -40,53 +144,116 @@ vec2 raySphere(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius)
                 (-2. * dot(p, rayDir) + sqrt(delta)) / (2. * dot(rayDir, rayDir)));
 }
 
-float raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
+vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
 {
     float t = -dot(rayDir, rayPos - spherePos) / dot(rayDir, rayDir);
-    if(t <= 0.) return 1e5;
+    if(t <= 0.) return vec2(1e5, t);
     vec3 pos = rayPos + t * rayDir;
-    return length(pos - spherePos) - radius;
+    return vec2(length(pos - spherePos) - radius, t);
 }
 
-vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, vec3 clr)
+vec4 rayCastMountainsLinear(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
+{
+    float nb_iterations = 20.;
+    float maxt = tPlanety;
+    float dt = max(0.05, maxt / nb_iterations);
+    float lh = 0.0;
+    float ly = 0.0;
+    for(float t = 0.001; t < maxt; t += dt)
+    {
+        vec3 p = rayPos + t * rayDir;
+        float py = length(p - sphPos) - radius;
+        vec3 d = normalize(p - sphPos);
+        // vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+        vec2 uv = cubeMapUV(d);
+        float h = mountainAmplitude * fbm(mountainFrequency * uv);
+        if(py < h)
+        {
+            float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh);
+            return vec4(rayPos + dst * rayDir, h);
+        }
+        lh = h;
+        ly = py;
+    }
+    return vec4(-1.);
+}
+
+vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
+{
+    int NB_ITERATIONS = 16;
+    float goingDown = 1.;
+    float hscale = length(rayPos - sphPos) - radius;
+    float tmax = 1.;
+    vec2 planetHitInfo = raySphere(rayPos, rayDir, sphPos, radius);
+    if(planetHitInfo.x > planetHitInfo.y || planetHitInfo.y < 0.)
+    {
+        vec2 md = raySphereMinDist(rayPos, rayDir, sphPos, radius);
+        if(md.y < 0.) 
+        {
+            tmax = tPlanety;
+            goingDown = -1.;
+        }
+        else
+        {
+            hscale -= md.x;
+            tmax = md.y;
+        }
+    }
+    else
+        tmax = planetHitInfo.x;
+
+    float t = tmax / 2.;
+    vec3 p;
+    float dt = t / 2.;
+    bool foundMountain = false;
+    for(int i = 0; i < NB_ITERATIONS; i++)
+    {
+        p = rayPos + t * rayDir;
+        float ph = length(p - sphPos) - radius;
+        vec3 d = normalize(p - sphPos);
+        // vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+        vec2 uv = cubeMapUV(d);
+        float h = mountainAmplitude * fbm(mountainFrequency * uv);
+
+        foundMountain = foundMountain || (ph < h);
+        t += dt * goingDown * (ph >= h ? 1. : -1.);
+        dt /= 2.;
+    }
+    if(!foundMountain)
+    {
+        return vec4(-1.);
+        // // if no mountain was found, we perform a small linear check
+        // return rayCastMountainsLinear(rayPos, rayDir, sphPos, radius, tPlanety);
+    }
+    return vec4(rayPos + t * rayDir, length(p - sphPos) - radius);
+}
+
+vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
 {
     vec3 d = (pos - spherePos) / radius;
     d.xz *= rot2D(0.02 * time);
-    vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+    // vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+    // vec2 uv = cubeMapUV(d);
 
-    return max(0.1, dot(d, normalize(lightSource - pos))) * texture(earthTexture, uv).gbr;
+    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety);
+    float n = mtn.w / mountainAmplitude;
+    if(n < 0.) return vec3(-1.);
+    vec3 clr;
+
+    if(n < 0.4) clr = vec3(79., 76., 176.) / 255.;
+    else if(n < 0.45) clr = vec3(216., 197., 150.) / 255.;
+    else if(n < 0.65) clr = vec3(159., 193., 100.) / 255.;
+    else clr = vec3(195.,146.,79.) / 255.;
+
+    return max(0.2, dot(normalize(pos - spherePos), normalize(lightSource - pos))) * clr;
 }
 
-float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
-vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
-vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
-
-float noise(vec3 p){
-    vec3 a = floor(p);
-    vec3 d = p - a;
-    d = d * d * (3.0 - 2.0 * d);
-
-    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
-    vec4 k1 = perm(b.xyxy);
-    vec4 k2 = perm(k1.xyxy + b.zzww);
-
-    vec4 c = k2 + a.zzzz;
-    vec4 k3 = perm(c);
-    vec4 k4 = perm(c + 1.0);
-
-    vec4 o1 = fract(k3 * (1.0 / 41.0));
-    vec4 o2 = fract(k4 * (1.0 / 41.0));
-
-    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
-    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
-
-    return o4.y * d.y + o4.x * (1.0 - d.y);
-}
 
 vec3 background(vec3 rayDir)
 {
     vec3 d = normalize(rayDir);
-    return vec3(step(0.96, noise(500. * d)));
+    vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+    return vec3(smoothstep(0.96, 0.98, noise(1000. * uv)));
 }
 
 float densityAtPoint(vec3 where, vec3 planetPos, float planetRadius)
@@ -151,12 +318,17 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
     float planetRadius = 60.0;
     for(int i = 0; i < NB_PLANETS; i++)
     {
-        vec2 tPlanet = raySphere(rayPos, rayDir, planets[i], planetRadius);
+        vec2 tPlanet = raySphere(rayPos, rayDir, planets[i], planetRadius + mountainAmplitude);
         if(tPlanet.y > tPlanet.x && tPlanet.x < tMin && tPlanet.y >= 0.)
         {
-            tMin = tPlanet.x;
-            tToPlanet = tPlanet.x;
-            argmin = shadePlanet(rayDir, rayPos + tPlanet.x * rayDir, planets[i], planetRadius, sunPos, planetColor);
+            vec3 mountainColor = shadePlanet(rayDir, rayPos + tPlanet.x * rayDir, 
+                            planets[i], planetRadius, sunPos, tPlanet.y - tPlanet.x);
+            if(mountainColor.x >= -0.1)
+            {
+                tMin = tPlanet.x;
+                tToPlanet = tPlanet.x;
+                argmin = mountainColor;
+            }
         }
     }
 
@@ -171,7 +343,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         }
         else
         {
-            float md = (1.0 / 10.) * raySphereMinDist(rayPos, rayDir, sunPos, 10.) + 1.;
+            float md = (1.0 / 10.) * raySphereMinDist(rayPos, rayDir, sunPos, 10.).x + 1.;
             float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
             argmin = light * sunColor + (1.0 - light) * argmin;
         }
