@@ -152,63 +152,17 @@ vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
     return vec2(length(pos - spherePos) - radius, t);
 }
 
-vec4 rayCastMountainsLinear(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
-{
-    float nb_iterations = 20.;
-    float maxt = tPlanety;
-    float dt = max(0.05, maxt / nb_iterations);
-    float lh = 0.0;
-    float ly = 0.0;
-    for(float t = 0.001; t < maxt; t += dt)
-    {
-        vec3 p = rayPos + t * rayDir;
-        float py = length(p - sphPos) - radius;
-        vec3 d = normalize(p - sphPos);
-        // vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
-        vec2 uv = cubeMapUV(d);
-        float h = mountainAmplitude * fbm(mountainFrequency * uv);
-        if(py < h)
-        {
-            float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh);
-            return vec4(rayPos + dst * rayDir, h);
-        }
-        lh = h;
-        ly = py;
-    }
-    return vec4(-1.);
-}
 
-vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
+float binarySearchMountain( vec3 start, vec3 rayDir, vec3 sphPos, float radius, 
+                            float tmax, float goingDown, int NB_ITERATIONS)
 {
-    int NB_ITERATIONS = 16;
-    float goingDown = 1.;
-    float hscale = length(rayPos - sphPos) - radius;
-    float tmax = 1.;
-    vec2 planetHitInfo = raySphere(rayPos, rayDir, sphPos, radius);
-    if(planetHitInfo.x > planetHitInfo.y || planetHitInfo.y < 0.)
-    {
-        vec2 md = raySphereMinDist(rayPos, rayDir, sphPos, radius);
-        if(md.y < 0.) 
-        {
-            tmax = tPlanety;
-            goingDown = -1.;
-        }
-        else
-        {
-            hscale -= md.x;
-            tmax = md.y;
-        }
-    }
-    else
-        tmax = planetHitInfo.x;
-
     float t = tmax / 2.;
     vec3 p;
     float dt = t / 2.;
     bool foundMountain = false;
     for(int i = 0; i < NB_ITERATIONS; i++)
     {
-        p = rayPos + t * rayDir;
+        p = start + t * rayDir;
         float ph = length(p - sphPos) - radius;
         vec3 d = normalize(p - sphPos);
         // vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
@@ -219,13 +173,36 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
         t += dt * goingDown * (ph >= h ? 1. : -1.);
         dt /= 2.;
     }
-    if(!foundMountain)
+    if(!foundMountain) return -1.; // TODO : return 1e5 et se debarrasser du bool
+    return t;
+}
+
+vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
+{
+    const int NB_ITERATIONS = 16;
+    const int HALF_NB_ITERATIONS = 8;
+    float goingDown = 1.;
+    float tmax = 1.;
+    vec2 planetHitInfo = raySphere(rayPos, rayDir, sphPos, radius);
+    float t = 0.5;
+    if(planetHitInfo.x > planetHitInfo.y || planetHitInfo.y < 0.)
     {
-        return vec4(-1.);
-        // // if no mountain was found, we perform a small linear check
-        // return rayCastMountainsLinear(rayPos, rayDir, sphPos, radius, tPlanety);
+        tmax = raySphereMinDist(rayPos, rayDir, sphPos, radius).y;
+        t = binarySearchMountain(rayPos, rayDir, sphPos, radius, tmax, 1., NB_ITERATIONS);
+        if(t < 0.) // if the ray didn't find any mountain while going down to min, search when ascending
+            t = binarySearchMountain(rayPos + tmax * rayDir, rayDir, sphPos, radius, tPlanety - tmax, -1., NB_ITERATIONS);
     }
-    return vec4(rayPos + t * rayDir, length(p - sphPos) - radius);
+    else
+    {
+        tmax = planetHitInfo.x;
+        t = binarySearchMountain(rayPos, rayDir, sphPos, radius, planetHitInfo.x, 1., NB_ITERATIONS);
+    }
+
+    if(t < 0.)
+        return vec4(-1.);
+
+    vec3 p = rayPos + t * rayDir;
+    return vec4(p, length(p - sphPos) - radius);
 }
 
 vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
@@ -263,6 +240,42 @@ float densityAtPoint(vec3 where, vec3 planetPos, float planetRadius)
     return exp(-h01 * atmosFalloff) * (1. - h01);
 }
 
+float opticalDepthFast(vec3 rayDir, vec3 rayPos, float rayLength, float nb_steps, vec3 planetPos, float planetRadius)
+{
+    const float r = 0.86, q = 1.25; // magic numbers :)
+    float m = (r * r) / (1. - r * r);
+    float mp = 1. - 1. / r;
+    const float e = 2.71828;
+    float qp = (e * q) / (q + e - q * e) - q;
+    float qpp = 1. - 1. / q;
+    float rdl2 = dot(rayDir, rayDir);
+
+    vec3 j = rayPos - planetPos;
+    float dotrdj = dot(rayDir, j);
+    float jl2 = dot(j, j);
+
+    float ar2 = atmosRadius * atmosRadius;
+    float K = exp(planetRadius / (atmosRadius * atmosFalloff));
+    float Kp = planetRadius * K / atmosRadius;
+
+    float A = rdl2 * m / ar2;
+    float B = (2. * m * dotrdj) / ar2;
+    float C = r + (m * jl2) / ar2;
+    float delta = sqrt(4. * A * C - B * B);
+
+    float D = rdl2 * qp / ar2;
+    float E = 2. * qp * dotrdj / ar2;
+    float F = q + qp * jl2 / ar2;
+    float deltap = sqrt(4. * D * F - E * E);
+
+    float integral1 = atan(2. * A * rayLength + B, delta) - atan(B, delta);
+    float integral2 = atan(2. * D * rayLength + E, deltap) - atan(F, deltap);
+
+    float rem = (K * mp - Kp * qpp) * rayLength;
+
+    return (2. * K / delta) * integral1 - (2. * Kp / deltap) * integral2 + rem;
+}
+
 float opticalDepth(vec3 rayDir, vec3 rayPos, float rayLength, float nb_steps, vec3 planetPos, float planetRadius)
 {
     vec3 p = rayPos;
@@ -295,8 +308,8 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
         float height = length(p - planetPos) - radius;
         float rayLengthToSky = raySphere(p, toLight, planetPos, radius + atmosRadius).y;
 
-        float iOpticalDepth = opticalDepth(toLight, p, rayLengthToSky, NB_STEPS_j, planetPos, radius);
-        toEyeOpticalDepth = opticalDepth(-rayDir, p, t, NB_STEPS_j, planetPos, radius);
+        float iOpticalDepth = opticalDepth(toLight, p, rayLengthToSky, NB_STEPS_j, planetPos, 1.);
+        toEyeOpticalDepth = opticalDepth(-rayDir, p, t, NB_STEPS_j, planetPos, 1.);
         vec3 transmittance = exp(-(iOpticalDepth + toEyeOpticalDepth) * atmosColor);
         float localDensity = densityAtPoint(p, planetPos, radius);
 
@@ -321,8 +334,8 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         vec2 tPlanet = raySphere(rayPos, rayDir, planets[i], planetRadius + mountainAmplitude);
         if(tPlanet.y > tPlanet.x && tPlanet.x < tMin && tPlanet.y >= 0.)
         {
-            vec3 mountainColor = shadePlanet(rayDir, rayPos + tPlanet.x * rayDir, 
-                            planets[i], planetRadius, sunPos, tPlanet.y - tPlanet.x);
+            vec3 mountainColor = shadePlanet(rayDir, rayPos + max(0., tPlanet.x) * rayDir, 
+                            planets[i], planetRadius, sunPos, tPlanet.y - max(0., tPlanet.x));
             if(mountainColor.x >= -0.1)
             {
                 tMin = tPlanet.x;

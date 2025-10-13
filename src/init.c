@@ -191,6 +191,7 @@ unsigned int init(GLFWwindow** window)
     }
 
     glfwMakeContextCurrent(*window);
+    // glfwSwapInterval(0); // to disable V-SYNC
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {

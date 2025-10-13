@@ -17,6 +17,7 @@ struct InputData {
     float atmosRadius;
     float atmosFalloff;
     float atmosScattering;
+    float atmosColorPower;
     float atmosColor[3];
     float mountainFrequency;
     float mountainAmplitude;
