@@ -16,6 +16,7 @@ int main()
     unsigned int program = init(&window);
 
     auto earthTexture = init_texture("../assets/eart.ppm");
+    auto opticalDepthTexture = init_texture("../assets/opticalDepth.pgm");
 
     Input::init(window);
     auto camera = std::make_unique<Camera>(window);
@@ -51,8 +52,11 @@ int main()
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, earthTexture);
-        unsigned int u_Texture = glGetUniformLocation(program, "earthTexture");
-        glUniform1i(u_Texture, 0);
+        glUniform1i(glGetUniformLocation(program, "earthTexture"), 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, opticalDepthTexture);
+        glUniform1i(glGetUniformLocation(program, "opticalDepthTexture"), 1);
 
         auto inputData = Input::getInput();
         glUniform1f(glGetUniformLocation(program, "time"), elapsedTime);

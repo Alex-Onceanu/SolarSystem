@@ -10,10 +10,9 @@
 #define ATTR_PER_VERTEX 3
 #define NB_INDEX 6
 
-
-
 // written in one of my previous projects 2 years ago
-unsigned char *read_ppm(const char *filename_ppm, int *width, int *height)
+// I adapted it so it can also read grey-scale images (.pgm format)
+unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *height)
 {
     FILE *fichier = fopen(filename_ppm, "r");
     if (fichier == NULL)
@@ -21,7 +20,7 @@ unsigned char *read_ppm(const char *filename_ppm, int *width, int *height)
         printf("Can't find %s\n", filename_ppm);
         return NULL;
     }
-    if(fgetc(fichier) != 'P' || fgetc(fichier) != '6')
+    if(fgetc(fichier) != 'P' || fgetc(fichier) != (is_pgm ? '5' : '6'))
     {
         return NULL;
     }
@@ -51,9 +50,9 @@ unsigned char *read_ppm(const char *filename_ppm, int *width, int *height)
 
     // Tout le fichier est lu d'un seul coup avec un fread approprié
 
-    int nb_px = (*width) * (*height); // rgb
-    unsigned char *res = malloc(3 * nb_px * sizeof(unsigned char));
-    fread(res, sizeof(unsigned char), 3 * nb_px, fichier);
+    int nb_px = (*width) * (*height);
+    unsigned char *res = malloc((is_pgm ? 1 : 3) * nb_px * sizeof(unsigned char));
+    fread(res, sizeof(unsigned char), (is_pgm ? 1 : 3) * nb_px, fichier);
 
     fclose(fichier);
     return res;
@@ -61,8 +60,13 @@ unsigned char *read_ppm(const char *filename_ppm, int *width, int *height)
 
 unsigned int init_texture(const char* path)
 {
+    if(!path || !*path || !path[1]) return -1;
+
+    static unsigned int dejavu = 0;
     int width, height;
-    unsigned char *data = read_ppm(path, &width, &height);
+    int g = 0; for(; path[g]; g++);
+    int is_pgm = path[g - 2] == 'g';
+    unsigned char *data = read_ppm(is_pgm, path, &width, &height);
 
     // Chaque texture chargée est associée à un uint, qu'on stocke dans un
     // unsigned int[], ici comme il y en a 1 seul on envoie &texture
@@ -70,17 +74,30 @@ unsigned int init_texture(const char* path)
     // Génération du texture object
     glGenTextures(1, &texture_id);
 
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0 + dejavu++);
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
 
-    // On attache une image 2d à un texture object
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    if(!is_pgm)
+    {
+        // On attache une image 2d à un texture object
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 
-    glGenerateMipmap(GL_TEXTURE_2D);
+        glGenerateMipmap(GL_TEXTURE_2D);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+    else
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+
 
     return texture_id;
 }
@@ -191,6 +208,7 @@ unsigned int init(GLFWwindow** window)
     }
 
     glfwMakeContextCurrent(*window);
+    glfwSwapInterval(0);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {

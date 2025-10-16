@@ -29,8 +29,10 @@ struct vec3 {
     void operator+=(const vec3& o) { x += o.x; y += o.y; z += o.z; }
     vec3 operator*(const float& f) { return vec3(x * f, y * f, z * f); }
     void operator*=(const float& f) { x *= f; y *= f; z *= f; }
+    vec3 operator-(const vec3& o) { return vec3(x - o.x, y - o.y, z - o.z); }
+    void operator-=(const vec3& o) { x -= o.x; y -= o.y; z -= o.z; }
 
-    float dot(const vec3& o) { return x * o.x + y * o.y + z * o.z; }
+    float dot(const vec3& o) const { return x * o.x + y * o.y + z * o.z; }
     vec3 cross(const vec3& o) { return vec3(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x); }
     float length() { return sqrtf(x * x + y * y + z * z); }
     void normalized() { float l = length(); if(l <= 0.) return; x /= l; y /= l; z /= l; }
@@ -40,6 +42,9 @@ struct vec3 {
         stream << "(" << v.x << ", " << v.y << ", " << v.z << ")";
         return stream;
     }
+
+    static float dot(const vec3& x, const vec3& y) { return x.dot(y); }
 };
+
 
 #endif // MATH_H

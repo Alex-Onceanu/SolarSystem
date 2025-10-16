@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-unsigned char *read_ppm(const char *filename_ppm, int *width, int *height);
+unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *height);
 
 unsigned int init_texture(const char* path);
 

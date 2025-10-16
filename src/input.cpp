@@ -42,8 +42,8 @@ InputData Input::getInput()
     static InputData data{  .sunPos{ -10.,30.,260. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 30.0,
                             .planetPos{ 0.,-60.,50. }, .planetColor{ 0.3,0.2,1. }, .fov = 60.,
                             .nb_steps_i = 14., .nb_steps_j = 6.,
-                            .atmosRadius = 18., .atmosFalloff = 18., .atmosScattering = 1., .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 10., .mountainAmplitude = 4. };
+                            .atmosRadius = 14., .atmosFalloff = 4., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
+                            .mountainFrequency = 8., .mountainAmplitude = 8. };
 
     ImGui::SliderFloat("fov", &data.fov, 10.0, 120.0);
 
@@ -57,12 +57,12 @@ InputData Input::getInput()
     ImGui::SliderFloat("atmos steps i", &data.nb_steps_i, 0., 30.);
     ImGui::SliderFloat("atmos steps j", &data.nb_steps_j, 0., 30.);
     ImGui::SliderFloat("atmos radius", &data.atmosRadius, 0., 50.0);
-    ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 1., 50.0);
+    ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 0.0001, 40.0);
     ImGui::SliderFloat("atmos scattering", &data.atmosScattering, 0., 10.);
     ImGui::SliderFloat3("atmos λ (nm)", data.atmosColor, 400., 800.);
     
     ImGui::SliderFloat("mountain f", &data.mountainFrequency, 0., 50.);
-    ImGui::SliderFloat("mountain amp", &data.mountainAmplitude, 0.01, 10.);
+    ImGui::SliderFloat("mountain amp", &data.mountainAmplitude, 0.01, 20.);
 
     ImGui::End();
     return data;
