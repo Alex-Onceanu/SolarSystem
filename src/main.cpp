@@ -16,7 +16,7 @@ int main()
     unsigned int program = init(&window);
 
     auto earthTexture = init_texture("../assets/eart.ppm");
-    auto opticalDepthTexture = init_texture("../assets/opticalDepth.pgm");
+    auto opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init(window);
     auto camera = std::make_unique<Camera>(window);
@@ -45,7 +45,7 @@ int main()
         nbFramesThisSecond++;
         if(timeSinceLastSecond >= 1.0f)
         {
-            std::cout << "FPS : " << nbFramesThisSecond << std::endl;
+            // std::cout << "FPS : " << nbFramesThisSecond << std::endl;
             nbFramesThisSecond = 0;
             lastSecondTime = currentTime;
         }

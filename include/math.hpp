@@ -4,6 +4,14 @@
 #include <iostream>
 #include <cmath>
 
+template <typename T>
+T CLAMP(const T& x, const T& minv, const T& maxv)
+{
+    if(x < minv) return minv;
+    if(x > maxv) return maxv;
+    else         return x;
+}
+
 struct vec2 {
     float x{}, y{};
     vec2() : x(0.), y(0.) {}
@@ -27,6 +35,7 @@ struct vec3 {
 
     vec3 operator+(const vec3& o) { return vec3(x + o.x, y + o.y, z + o.z); }
     void operator+=(const vec3& o) { x += o.x; y += o.y; z += o.z; }
+    vec3 operator*(const vec3& o) { return vec3(x * o.x, y * o.y, z * o.z); }
     vec3 operator*(const float& f) { return vec3(x * f, y * f, z * f); }
     void operator*=(const float& f) { x *= f; y *= f; z *= f; }
     vec3 operator-(const vec3& o) { return vec3(x - o.x, y - o.y, z - o.z); }
@@ -44,6 +53,28 @@ struct vec3 {
     }
 
     static float dot(const vec3& x, const vec3& y) { return x.dot(y); }
+    static vec3 floor(const vec3& p) { return vec3((float)(int)p.x - (p.x < 0. ? 1. : 0.), (float)(int)p.y - (p.y < 0. ? 1. : 0.), (float)(int)p.z - (p.z < 0. ? 1. : 0.)); }
+};
+
+struct vec4 {
+    float x, y, z, w;
+
+    vec4() : x(0.), y(0.), z(0.), w(0.) {}
+    vec4(float __x, float __y, float __z, float __w) : x(__x), y(__y), z(__z), w(__w) {}
+
+    vec4 operator+(const vec4& o) { return vec4(x + o.x, y + o.y, z + o.z, w + o.w); }
+    void operator+=(const vec4& o) { x += o.x; y += o.y; z += o.z; }
+    vec4 operator*(const vec4& o) { return vec4(x * o.x, y * o.y, z * o.z, w * o.w); }
+    vec4 operator*(const float& f) { return vec4(x * f, y * f, z * f, w * f); }
+    void operator*=(const float& f) { x *= f; y *= f; z *= f; }
+    vec4 operator-(const vec4& o) { return vec4(x - o.x, y - o.y, z - o.z, w - o.w); }
+    void operator-=(const vec4& o) { x -= o.x; y -= o.y; z -= o.z; }
+
+    float length() { return sqrtf(x * x + y * y + z * z); }
+    void normalized() { float l = length(); if(l <= 0.) return; x /= l; y /= l; z /= l; }
+
+    static vec4 floor(const vec4& p) { return vec4((float)(int)p.x - (p.x < 0. ? 1. : 0.), (float)(int)p.y - (p.y < 0. ? 1. : 0.), (float)(int)p.z - (p.z < 0. ? 1. : 0.), (float)(int)p.w - (p.w < 0. ? 1. : 0.)); }
+    static vec4 fract(const vec4& p) { return vec4(p.x - (float)(int)p.x + (p.x < 0. ? 1. : 0.), p.y - (float)(int)p.y + (p.y < 0. ? 1. : 0.), p.z - (float)(int)p.z + (p.z < 0. ? 1. : 0.), p.w - (float)(int)p.w + (p.w < 0. ? 1. : 0.)); }
 };
 
 
