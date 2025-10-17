@@ -67,10 +67,7 @@ int main()
             inputData.sunCoronaStrength);
         glUniform3f(glGetUniformLocation(program, "planetPos"), 
             inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]);
-        glUniform3f(glGetUniformLocation(program, "planetColor"), 
-            inputData.planetColor[0], inputData.planetColor[1], inputData.planetColor[2]);
         glUniform1f(glGetUniformLocation(program, "fov"), inputData.fov * 3.1415 / 180.);
-
 
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_i"), inputData.nb_steps_i);
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_j"), inputData.nb_steps_j);
@@ -84,6 +81,11 @@ int main()
         glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
         glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
         glUniform1f(glGetUniformLocation(program, "seaLevel"), inputData.seaLevel);
+
+        glUniform1f(glGetUniformLocation(program, "ambientCoef"), inputData.ambientCoef);
+        glUniform1f(glGetUniformLocation(program, "diffuseCoef"), inputData.diffuseCoef);
+        glUniform1f(glGetUniformLocation(program, "minDiffuse"), inputData.minDiffuse);
+        glUniform1f(glGetUniformLocation(program, "penumbraCoef"), inputData.penumbraCoef);
 
         glUniform1f(glGetUniformLocation(program, "nbStars"), inputData.nbStars);
         glUniform1f(glGetUniformLocation(program, "starsDisplacement"), inputData.starsDisplacement);

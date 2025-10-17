@@ -15,7 +15,11 @@ uniform float sunCoronaStrength;
 uniform float aspectRatio;
 
 uniform vec3 planetPos;
-uniform vec3 planetColor;
+
+uniform float ambientCoef;
+uniform float diffuseCoef;
+uniform float minDiffuse;
+uniform float penumbraCoef;
 
 uniform sampler2D earthTexture;
 uniform sampler2D opticalDepthTexture;
@@ -36,6 +40,7 @@ uniform float starSize;
 uniform float starSizeVariation;
 uniform float starVoidThreshold;
 uniform float starFlickering;
+
 
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
@@ -180,14 +185,14 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     if(n < 0.) return vec3(-1.);
     vec3 clr;
 
-    if(n < seaLevel + 0.0001) clr = vec3(79., 76., 176.) / 255.;
-    else if(n < seaLevel + 0.08) clr = vec3(216., 197., 150.) / 255.;
+    if(n <= seaLevel + 0.0001) clr = vec3(79., 76., 176.) / 255.;
+    else if(n < seaLevel + 0.05) clr = vec3(216., 197., 150.) / 255.;
     else if(n < 0.6) clr = vec3(195.,146.,79.) / 255.;
     else clr = vec3(159., 193., 100.) / 255.;
 
     vec3 sphereNormal = normalize(mtn.xyz - spherePos);
     // sphereDiffuse doesn't account for mountains
-    float sphereDiffuse = max(0.0, dot(normalize(mtn.xyz - spherePos), normalize(lightSource - mtn.xyz)));
+    float sphereDiffuse = max(minDiffuse, dot(normalize(mtn.xyz - spherePos), normalize(lightSource - mtn.xyz)));
 
     vec2 eps = vec2(0.0035, 0.);
 
@@ -211,13 +216,14 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     // if(abs(dot(localNormal, sphereNormal)) < grassOnSlope) 
     //     clr = vec3(195.,146.,79.) / 255.;
 
+    // clr = mix(clr, vec3(0.34, 0.34, 0.34), smoothstep(0.0, 0.3, abs(dot(localNormal, sphereNormal))));
+
     float diffuse = max(0.0, dot(localNormal, normalize(lightSource - mtn.xyz)));
+    float penumbra = smoothstep(0.1, 0.6, n); // trick for faking penumbra
 
-    float ambientCoef = 0.2;
-    float minDiffuseCoef = 0.7;
-    float maxDiffuseCoef = 0.1;
+    float light = diffuseCoef * diffuse * sphereDiffuse + penumbraCoef * penumbra;
 
-    return (ambientCoef + minDiffuseCoef * min(diffuse, sphereDiffuse) + maxDiffuseCoef * max(diffuse,  sphereDiffuse)) * clr;
+    return light * clr + ambientCoef * normalize(vec3(1.) + atmosColor);
 }
 
 // _____________________________________________________ ATMOSPHERE ________________________________________________________

@@ -9,7 +9,6 @@ struct InputData {
     float sunCoronaStrength;
 
     float planetPos[3];
-    float planetColor[3];
     float fov;
 
     float nb_steps_i;
@@ -21,6 +20,11 @@ struct InputData {
     float mountainFrequency;
     float mountainAmplitude;
     float seaLevel;
+
+    float ambientCoef;
+    float diffuseCoef;
+    float minDiffuse;
+    float penumbraCoef;
 
     float nbStars;
     float starsDisplacement;

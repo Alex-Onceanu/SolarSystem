@@ -34,45 +34,69 @@ InputData Input::getInput()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    const int w = 360, h = 560;
+    const int w = 380, h = 360;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
     static InputData data{  .sunPos{ -10.,30.,260. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 40.0,
-                            .planetPos{ 0.,-60.,50. }, .planetColor{ 0.3,0.2,1. }, .fov = 60.,
+                            .planetPos{ 0.,-60.,50. }, .fov = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
-                            .atmosRadius = 18., .atmosFalloff = 6., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 8., .seaLevel = .3,
+                            .atmosRadius = 28., .atmosFalloff = 7., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
+                            .mountainFrequency = 8., .mountainAmplitude = 8., .seaLevel = .3, 
+                            .ambientCoef = 0.04, .diffuseCoef = 0.75, .minDiffuse = 0.14, .penumbraCoef = 0.15,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 873. };
 
     auto io = ImGui::GetIO();
     ImGui::Text("FPS: %.1f", io.Framerate);
-    ImGui::Text("Frame time: %.3f ms", 1000.0f / io.Framerate);
-    ImGui::SliderFloat("fov", &data.fov, 10.0, 120.0);
 
-    ImGui::SliderFloat3("sun position", data.sunPos, -500., 500.);
-    ImGui::ColorEdit3("sun color", data.sunColor);
-    ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 60.0);
+    if (ImGui::CollapsingHeader("General"))
+    {
+        ImGui::Text("Frame time: %.3f ms", 1000.0f / io.Framerate);
+        ImGui::SliderFloat("fov", &data.fov, 10.0, 120.0);
+    }
+
+    if (ImGui::CollapsingHeader("Sun"))
+    {
+        ImGui::SliderFloat3("sun position", data.sunPos, -500., 500.);
+        ImGui::ColorEdit3("sun color", data.sunColor);
+        ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 100.0);
+    }
+
+    if (ImGui::CollapsingHeader("Planet"))
+    {
+        ImGui::SliderFloat3("planet position", data.planetPos, -500., 500.);
+        ImGui::SliderFloat("mountain height", &data.mountainAmplitude, 0.01, 20.);
+        ImGui::SliderFloat("sea level", &data.seaLevel, 0., 1.);
+    }
+
+    if (ImGui::CollapsingHeader("Light"))
+    {
+        ImGui::SliderFloat("ambientCoef", &data.ambientCoef, 0., 1.);
+        ImGui::SliderFloat("diffuseCoef", &data.diffuseCoef, 0., 1.);
+        ImGui::SliderFloat("minDiffuse", &data.minDiffuse, 0., 1.);
+        ImGui::SliderFloat("penumbraCoef", &data.penumbraCoef, 0., 1.);
+    }
+
+    if (ImGui::CollapsingHeader("Atmosphere"))
+    {
+        ImGui::SliderFloat("atmos steps i", &data.nb_steps_i, 0., 30.);
+        ImGui::SliderFloat("atmos steps j", &data.nb_steps_j, 0., 30.);
+        ImGui::SliderFloat("atmos radius", &data.atmosRadius, 0., 50.0);
+        ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 0.0001, 40.0);
+        ImGui::SliderFloat("atmos scattering", &data.atmosScattering, 0., 10.);
+        ImGui::SliderFloat3("atmos lambda (nm)", data.atmosColor, 400., 800.);
+    }
     
-    ImGui::SliderFloat3("planet position", data.planetPos, -500., 500.);
-    
-    ImGui::SliderFloat("atmos steps i", &data.nb_steps_i, 0., 30.);
-    ImGui::SliderFloat("atmos steps j", &data.nb_steps_j, 0., 30.);
-    ImGui::SliderFloat("atmos radius", &data.atmosRadius, 0., 50.0);
-    ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 0.0001, 40.0);
-    ImGui::SliderFloat("atmos scattering", &data.atmosScattering, 0., 10.);
-    ImGui::SliderFloat3("atmos lambda (nm)", data.atmosColor, 400., 800.);
-
-    ImGui::SliderFloat("mountain height", &data.mountainAmplitude, 0.01, 20.);
-    ImGui::SliderFloat("sea level", &data.seaLevel, 0., 1.);
-
-    ImGui::SliderFloat("nbStars", &data.nbStars, 100., 40000.);
-    ImGui::SliderFloat("starsDisplacement", &data.starsDisplacement, 0., 0.1);
-    ImGui::SliderFloat("starSize", &data.starSize, 500., 10000.);
-    ImGui::SliderFloat("starSizeVariation", &data.starSizeVariation, 0., 1000.);
-    ImGui::SliderFloat("starVoidThreshold", &data.starVoidThreshold, 0., 1.);
-    ImGui::SliderFloat("starFlickering", &data.starFlickering, 0., 1000.);
+    if (ImGui::CollapsingHeader("Background"))
+    {
+        ImGui::SliderFloat("nbStars", &data.nbStars, 100., 40000.);
+        ImGui::SliderFloat("starsDisplacement", &data.starsDisplacement, 0., 0.1);
+        ImGui::SliderFloat("starSize", &data.starSize, 500., 10000.);
+        ImGui::SliderFloat("starSizeVariation", &data.starSizeVariation, 0., 1000.);
+        ImGui::SliderFloat("starVoidThreshold", &data.starVoidThreshold, 0., 1.);
+        ImGui::SliderFloat("starFlickering", &data.starFlickering, 0., 1000.);
+    }
 
     ImGui::End();
     return data;
