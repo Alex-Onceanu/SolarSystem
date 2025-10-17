@@ -28,6 +28,7 @@ uniform vec3 atmosColor;
 
 uniform float mountainAmplitude;
 uniform float mountainFrequency;
+uniform float seaLevel;
 
 uniform float nbStars;
 uniform float starsDisplacement;
@@ -35,8 +36,6 @@ uniform float starSize;
 uniform float starSizeVariation;
 uniform float starVoidThreshold;
 uniform float starFlickering;
-
-float seaLevel = 0.3;
 
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
@@ -160,11 +159,11 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
         vec3 p = rayPos + t * rayDir;
         float py = length(p - sphPos) - radius;
         vec3 d = normalize(p - sphPos);
-        d.xz *= rot2D(0.1 * time);
+        // d.xz *= rot2D(0.1 * time);
         float h = mountainAmplitude * noise(d);
         if(py < h)
         {
-            float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh);
+            float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh); // <--- https://iquilezles.org/articles/terrainmarching/
             return vec4(rayPos + dst * rayDir, h);
         }
         lh = h;
@@ -177,15 +176,48 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
 {
     vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety);
     float n = mtn.w / mountainAmplitude;
+
     if(n < 0.) return vec3(-1.);
     vec3 clr;
 
     if(n < seaLevel + 0.0001) clr = vec3(79., 76., 176.) / 255.;
-    else if(n < seaLevel + 0.1) clr = vec3(216., 197., 150.) / 255.;
-    else if(n < 0.6) clr = vec3(159., 193., 100.) / 255.;
-    else clr = vec3(195.,146.,79.) / 255.;
+    else if(n < seaLevel + 0.08) clr = vec3(216., 197., 150.) / 255.;
+    else if(n < 0.6) clr = vec3(195.,146.,79.) / 255.;
+    else clr = vec3(159., 193., 100.) / 255.;
 
-    return max(0.1, dot(normalize(pos - spherePos), normalize(lightSource - pos))) * clr;
+    vec3 sphereNormal = normalize(mtn.xyz - spherePos);
+    // sphereDiffuse doesn't account for mountains
+    float sphereDiffuse = max(0.0, dot(normalize(mtn.xyz - spherePos), normalize(lightSource - mtn.xyz)));
+
+    vec2 eps = vec2(0.0035, 0.);
+
+    // derivative of implicit surface is (dF/dx, dF/dy, dF/dz) so here (-df/dx, 1, -df/dz)
+
+    vec3 sample1 = mtn.xyz + eps.xyy;
+    float h1 = noise(normalize(sample1 - spherePos));
+    vec3 sample1b = mtn.xyz - eps.xyy;
+    float h1b = noise(normalize(sample1b - spherePos));
+    float gradx = (h1 - h1b) / (2. * eps.x);
+
+    vec3 sample2 = mtn.xyz + eps.yyx;
+    float h2 = noise(normalize(sample2 - spherePos));\
+    vec3 sample2b = mtn.xyz - eps.yyx;
+    float h2b = noise(normalize(sample2b - spherePos));
+    float gradz = (h2 - h2b) / (2. * eps.x);
+
+    vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
+
+    // float grassOnSlope = 0.5;
+    // if(abs(dot(localNormal, sphereNormal)) < grassOnSlope) 
+    //     clr = vec3(195.,146.,79.) / 255.;
+
+    float diffuse = max(0.0, dot(localNormal, normalize(lightSource - mtn.xyz)));
+
+    float ambientCoef = 0.2;
+    float minDiffuseCoef = 0.7;
+    float maxDiffuseCoef = 0.1;
+
+    return (ambientCoef + minDiffuseCoef * min(diffuse, sphereDiffuse) + maxDiffuseCoef * max(diffuse,  sphereDiffuse)) * clr;
 }
 
 // _____________________________________________________ ATMOSPHERE ________________________________________________________
@@ -211,6 +243,7 @@ float opticalDepth(vec3 rayDir, vec3 rayPos, float rayLength, float nb_steps, ve
     return opticalDepth;
 }
 
+
 vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radius, vec3 lightSource, vec3 originalColor)
 {
     vec3 totalLight = vec3(0.);
@@ -226,13 +259,14 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
         float rayLengthToSky = raySphere(p, toLight, planetPos, radius + atmosRadius).y;
 
         float iOpticalDepth = opticalDepth(toLight, p, rayLengthToSky, NB_STEPS_j, planetPos, radius);
-        vec3 transmittance = exp(-iOpticalDepth * atmosColor);
+        toEyeOpticalDepth = opticalDepth(-rayDir, p, t, NB_STEPS_j, planetPos, radius);
+        vec3 transmittance = exp(-(iOpticalDepth + toEyeOpticalDepth) * atmosColor);
         float localDensity = densityAtPoint(p, planetPos, radius);
 
         totalLight += localDensity * transmittance * atmosColor * idt;
     }
 
-    return totalLight + originalColor;
+    return totalLight + exp(-toEyeOpticalDepth) * originalColor;
 }
 
 // _____________________________________________________ MAIN ________________________________________________________

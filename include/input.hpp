@@ -20,6 +20,7 @@ struct InputData {
     float atmosColor[3];
     float mountainFrequency;
     float mountainAmplitude;
+    float seaLevel;
 
     float nbStars;
     float starsDisplacement;

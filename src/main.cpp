@@ -83,6 +83,7 @@ int main()
 
         glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
         glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
+        glUniform1f(glGetUniformLocation(program, "seaLevel"), inputData.seaLevel);
 
         glUniform1f(glGetUniformLocation(program, "nbStars"), inputData.nbStars);
         glUniform1f(glGetUniformLocation(program, "starsDisplacement"), inputData.starsDisplacement);
