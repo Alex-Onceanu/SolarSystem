@@ -21,7 +21,7 @@ private:
     GLFWwindow* window{};
 
     vec3 pos{};
-    const float speedRef = 20.0;
+    const float speedRef = 50.0;
 
     vec2 theta{};
 };

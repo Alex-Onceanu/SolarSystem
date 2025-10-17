@@ -20,6 +20,13 @@ struct InputData {
     float atmosColor[3];
     float mountainFrequency;
     float mountainAmplitude;
+
+    float nbStars;
+    float starsDisplacement;
+    float starSize;
+    float starSizeVariation;
+    float starVoidThreshold;
+    float starFlickering;
 };
 
 class Input

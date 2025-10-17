@@ -34,7 +34,7 @@ InputData Input::getInput()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    const int w = 360, h = 460;
+    const int w = 360, h = 560;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
@@ -43,7 +43,8 @@ InputData Input::getInput()
                             .planetPos{ 0.,-60.,50. }, .planetColor{ 0.3,0.2,1. }, .fov = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 18., .atmosFalloff = 6., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 8. };
+                            .mountainFrequency = 8., .mountainAmplitude = 8., 
+                            .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 873. };
 
     auto io = ImGui::GetIO();
     ImGui::Text("FPS: %.1f", io.Framerate);
@@ -64,6 +65,13 @@ InputData Input::getInput()
     ImGui::SliderFloat3("atmos lambda (nm)", data.atmosColor, 400., 800.);
 
     ImGui::SliderFloat("mountain height", &data.mountainAmplitude, 0.01, 20.);
+
+    ImGui::SliderFloat("nbStars", &data.nbStars, 100., 40000.);
+    ImGui::SliderFloat("starsDisplacement", &data.starsDisplacement, 0., 0.1);
+    ImGui::SliderFloat("starSize", &data.starSize, 500., 10000.);
+    ImGui::SliderFloat("starSizeVariation", &data.starSizeVariation, 0., 1000.);
+    ImGui::SliderFloat("starVoidThreshold", &data.starVoidThreshold, 0., 1.);
+    ImGui::SliderFloat("starFlickering", &data.starFlickering, 0., 1000.);
 
     ImGui::End();
     return data;

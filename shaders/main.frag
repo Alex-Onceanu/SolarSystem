@@ -29,11 +29,38 @@ uniform vec3 atmosColor;
 uniform float mountainAmplitude;
 uniform float mountainFrequency;
 
+uniform float nbStars;
+uniform float starsDisplacement;
+uniform float starSize;
+uniform float starSizeVariation;
+uniform float starVoidThreshold;
+uniform float starFlickering;
+
 float seaLevel = 0.3;
+
+// _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
 mat2 rot2D(float theta)
 {
     return mat2(vec2(cos(theta), -sin(theta)), vec2(sin(theta), cos(theta)));
+}
+
+// see texturegen.cpp for yellow noise generation
+float noise(vec3 d)
+{
+    vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+    float x = texture(opticalDepthTexture, uv).r;
+    return max(x, seaLevel);
+}
+
+// Returns .x > .y if no intersection
+vec2 raySphere(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius)
+{
+    vec3 p = rayPos - sphPos;
+    float delta = 4. * (dot(p, rayDir) * dot(p, rayDir) - dot(rayDir, rayDir) * (dot(p, p) - radius * radius));
+    if(delta < 0.) return vec2(1e5, -1e5);
+    return vec2((-2. * dot(p, rayDir) - sqrt(delta)) / (2. * dot(rayDir, rayDir)), 
+                (-2. * dot(p, rayDir) + sqrt(delta)) / (2. * dot(rayDir, rayDir)));
 }
 
 // found some nice random values at https://www.shadertoy.com/view/Xt23Ry
@@ -48,7 +75,7 @@ vec2 inverseSF( vec3 p )
 {
     const float kTau = 6.28318530718;
     const float kPhi = (1.0+sqrt(5.0))/2.0;
-    const float kNum = 10000.0;
+    const float kNum = nbStars;
 
     float k  = max(2.0, floor(log2(kNum*kTau*0.5*sqrt(5.0)*(1.0-p.z*p.z))/log2(kPhi+1.0)));
     float Fk = pow(kPhi, k)/sqrt(5.0);
@@ -82,23 +109,7 @@ vec2 inverseSF( vec3 p )
     return vec2( j, sqrt(d) );
 }
 
-// see texturegen.cpp for yellow noise generation
-float noise(vec3 d)
-{
-    vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
-    float x = texture(opticalDepthTexture, uv).r;
-    return max(x, seaLevel);
-}
-
-// Returns .x > .y if no intersection
-vec2 raySphere(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius)
-{
-    vec3 p = rayPos - sphPos;
-    float delta = 4. * (dot(p, rayDir) * dot(p, rayDir) - dot(rayDir, rayDir) * (dot(p, p) - radius * radius));
-    if(delta < 0.) return vec2(1e5, -1e5);
-    return vec2((-2. * dot(p, rayDir) - sqrt(delta)) / (2. * dot(rayDir, rayDir)), 
-                (-2. * dot(p, rayDir) + sqrt(delta)) / (2. * dot(rayDir, rayDir)));
-}
+// _____________________________________________________ BACKGROUND ______________________________________________________
 
 vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
 {
@@ -107,6 +118,34 @@ vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
     vec3 pos = rayPos + t * rayDir;
     return vec2(length(pos - spherePos) - radius, t);
 }
+
+vec3 background(vec3 d)
+{
+    vec3 nd = normalize(d);
+    vec2 centered = inverseSF(nd);
+    float seed = centered.x;
+
+    float rand1 = rand(seed);
+    float rand2 = rand(rand1);
+    float rand3 = rand(rand2);
+    vec3 randVector = vec3(rand1, rand2, rand3);
+    
+    if(rand1 < starVoidThreshold) return vec3(0.); // so we have some void
+
+    // second call to inverseSF because we needed to get the seed first
+    // now we can use the seed to offset the stars for a more "natural" look
+    vec2 a = inverseSF(normalize(nd + starsDisplacement * (-1. + 2. * randVector)));
+
+    float dst = (starSize + starSizeVariation * rand1 + starFlickering * rand2 * pow(sin(3. * time * rand3), 5.)) * a.y;
+
+    float glow = 1. / (0.001 + dst * dst);
+    vec3 clr = 1. + 0.4 * randVector;
+    float border = 1. - smoothstep(0.0, 0.015, centered.y); // temporary fix to the "neighbours" issue
+
+    return tanh(glow * clr) * border;
+}
+
+// _____________________________________________________ PLANET ________________________________________________________
 
 vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
 {
@@ -149,12 +188,7 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     return max(0.1, dot(normalize(pos - spherePos), normalize(lightSource - pos))) * clr;
 }
 
-
-vec3 background(vec3 d)
-{
-    vec2 a = inverseSF(normalize(d));
-    return (1. - smoothstep(0.003, 0.005, a.y)) * vec3(rand(a.x), rand(rand(a.x)), rand(rand(rand(a.x))));
-}
+// _____________________________________________________ ATMOSPHERE ________________________________________________________
 
 float densityAtPoint(vec3 where, vec3 planetPos, float planetRadius)
 {
@@ -200,6 +234,8 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
 
     return totalLight + originalColor;
 }
+
+// _____________________________________________________ MAIN ________________________________________________________
 
 vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 {   

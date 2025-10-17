@@ -84,6 +84,13 @@ int main()
         glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
         glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
 
+        glUniform1f(glGetUniformLocation(program, "nbStars"), inputData.nbStars);
+        glUniform1f(glGetUniformLocation(program, "starsDisplacement"), inputData.starsDisplacement);
+        glUniform1f(glGetUniformLocation(program, "starSize"), inputData.starSize);
+        glUniform1f(glGetUniformLocation(program, "starSizeVariation"), inputData.starSizeVariation);
+        glUniform1f(glGetUniformLocation(program, "starVoidThreshold"), inputData.starVoidThreshold);
+        glUniform1f(glGetUniformLocation(program, "starFlickering"), inputData.starFlickering);
+
         camera->update(dt);
 
         vec3 camPos = camera->getPos();
