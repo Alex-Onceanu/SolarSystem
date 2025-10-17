@@ -45,7 +45,6 @@ int main()
         nbFramesThisSecond++;
         if(timeSinceLastSecond >= 1.0f)
         {
-            // std::cout << "FPS : " << nbFramesThisSecond << std::endl;
             nbFramesThisSecond = 0;
             lastSecondTime = currentTime;
         }

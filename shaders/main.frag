@@ -41,6 +41,47 @@ float rand(float co) { return fract(sin(co*(91.3458)) * 47453.5453); }
 float rand(vec2 co){ return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453); }
 float rand(vec3 co){ return rand(co.xy+rand(co.z)); }
 
+// copy-pasted this, generates random points on the surface of a sphere
+// iq's version of Keinert et al's inverse Spherical Fibonacci Mapping code
+// https://www.shadertoy.com/view/lllXz4
+vec2 inverseSF( vec3 p ) 
+{
+    const float kTau = 6.28318530718;
+    const float kPhi = (1.0+sqrt(5.0))/2.0;
+    const float kNum = 10000.0;
+
+    float k  = max(2.0, floor(log2(kNum*kTau*0.5*sqrt(5.0)*(1.0-p.z*p.z))/log2(kPhi+1.0)));
+    float Fk = pow(kPhi, k)/sqrt(5.0);
+    vec2  F  = vec2(round(Fk), round(Fk*kPhi)); // |Fk|, |Fk+1|
+    
+    vec2  ka = 2.0*F/kNum;
+    vec2  kb = kTau*(fract((F+1.0)*kPhi)-(kPhi-1.0));    
+
+    mat2 iB = mat2( ka.y, -ka.x, kb.y, -kb.x ) / (ka.y*kb.x - ka.x*kb.y);
+    vec2 c = floor(iB*vec2(atan(p.y,p.x),p.z-1.0+1.0/kNum));
+
+    float d = 8.0;
+    float j = 0.0;
+    for( int s=0; s<4; s++ ) 
+    {
+        vec2  uv = vec2(s&1,s>>1);
+        float id = clamp(dot(F, uv+c),0.0,kNum-1.0); // all quantities are integers
+        
+        float phi      = kTau*fract(id*kPhi);
+        float cosTheta = 1.0 - (2.0*id+1.0)/kNum;
+        float sinTheta = sqrt(1.0-cosTheta*cosTheta);
+        
+        vec3 q = vec3( cos(phi)*sinTheta, sin(phi)*sinTheta, cosTheta );
+        float tmp = dot(q-p, q-p);
+        if( tmp<d ) 
+        {
+            d = tmp;
+            j = id;
+        }
+    }
+    return vec2( j, sqrt(d) );
+}
+
 // see texturegen.cpp for yellow noise generation
 float noise(vec3 d)
 {
@@ -67,40 +108,20 @@ vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
     return vec2(length(pos - spherePos) - radius, t);
 }
 
-float binarySearchMountain( vec3 start, vec3 rayDir, vec3 sphPos, float radius, 
-                            float tmax, float goingDown, int NB_ITERATIONS)
+vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
 {
-    float t = tmax / 2.;
-    vec3 p;
-    float dt = t / 2.;
-    bool foundMountain = false;
-    for(int i = 0; i < NB_ITERATIONS; i++)
-    {
-        p = start + t * rayDir;
-        float ph = length(p - sphPos) - radius;
-        vec3 d = normalize(p - sphPos);
-        float h = mountainAmplitude * noise(d);
-
-        foundMountain = foundMountain || (ph < h);
-        t += dt * goingDown * (ph >= h ? 1. : -1.);
-        dt /= 2.;
-    }
-    if(!foundMountain) return -1.; // TODO : return 1e5 et se debarrasser du bool
-    return t;
-}
-
-vec4 rayCastMountainsLinear(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
-{
-    float nb_iterations = 800.;
+    float nb_iterations = 300.;
     float maxt = tPlanety;
-    float dt = max(0.01, maxt / nb_iterations);
+    float dt = max(0.05, maxt / nb_iterations);
     float lh = 0.0;
     float ly = 0.0;
+
     for(float t = 0.001; t < maxt; t += dt)
     {
         vec3 p = rayPos + t * rayDir;
         float py = length(p - sphPos) - radius;
         vec3 d = normalize(p - sphPos);
+        d.xz *= rot2D(0.1 * time);
         float h = mountainAmplitude * noise(d);
         if(py < h)
         {
@@ -113,43 +134,9 @@ vec4 rayCastMountainsLinear(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius,
     return vec4(-1.);
 }
 
-vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
-{
-    const int NB_ITERATIONS = 10;
-    const int HALF_NB_ITERATIONS = 8;
-    float goingDown = 1.;
-    float tmax = 1.;
-    vec2 planetHitInfo = raySphere(rayPos, rayDir, sphPos, radius);
-    float t = 0.5;
-    if(planetHitInfo.x > planetHitInfo.y || planetHitInfo.y < 0.)
-    {
-        return rayCastMountainsLinear(rayPos, rayDir, sphPos, radius, tPlanety);
-        // tmax = raySphereMinDist(rayPos, rayDir, sphPos, radius).y;
-        // t = binarySearchMountain(rayPos, rayDir, sphPos, radius, tmax, 1., HALF_NB_ITERATIONS);
-        // if(t < 0.) // if the ray didn't find any mountain while going down to min, search when ascending
-        //     t = binarySearchMountain(rayPos + tmax * rayDir, rayDir, sphPos, radius, tPlanety - tmax, -1., HALF_NB_ITERATIONS);
-    }
-    else
-    {
-        tmax = planetHitInfo.x;
-        t = binarySearchMountain(rayPos, rayDir, sphPos, radius, planetHitInfo.x, 1., NB_ITERATIONS);
-    }
-
-    if(t < 0.)
-        return vec4(-1.);
-
-    vec3 p = rayPos + t * rayDir;
-    return vec4(p, length(p - sphPos) - radius);
-}
-
 vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
 {
-    vec3 d = (pos - spherePos) / radius;
-    d.xz *= rot2D(0.02 * time);
-    // vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
-    // vec2 uv = cubeMapUV(d);
-
-    vec4 mtn = rayCastMountainsLinear(pos, rayDir, spherePos, radius, tPlanety);
+    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety);
     float n = mtn.w / mountainAmplitude;
     if(n < 0.) return vec3(-1.);
     vec3 clr;
@@ -162,10 +149,11 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     return max(0.1, dot(normalize(pos - spherePos), normalize(lightSource - pos))) * clr;
 }
 
-vec3 background(vec3 rayDir)
+
+vec3 background(vec3 d)
 {
-    vec3 d = normalize(rayDir);
-    return vec3(0.);
+    vec2 a = inverseSF(normalize(d));
+    return (1. - smoothstep(0.003, 0.005, a.y)) * vec3(rand(a.x), rand(rand(a.x)), rand(rand(rand(a.x))));
 }
 
 float densityAtPoint(vec3 where, vec3 planetPos, float planetRadius)
@@ -194,9 +182,6 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
     vec3 totalLight = vec3(0.);
     float iOpticalDepth = 0.0;
     float toEyeOpticalDepth = 0.;
-
-    // float mu = dot(rayDir, normalize(lightSource - start));
-    // float phase = 3.0 * (1.0 + mu * mu) / (16.0 * 3.14159265); // less scattering when orthogonal
 
     float idt = dist / NB_STEPS_i;
     for(float t = idt; t <= dist; t += idt)

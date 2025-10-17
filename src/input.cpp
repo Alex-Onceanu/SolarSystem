@@ -41,8 +41,8 @@ InputData Input::getInput()
 
     static InputData data{  .sunPos{ -10.,30.,260. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 40.0,
                             .planetPos{ 0.,-60.,50. }, .planetColor{ 0.3,0.2,1. }, .fov = 60.,
-                            .nb_steps_i = 14., .nb_steps_j = 6.,
-                            .atmosRadius = 14., .atmosFalloff = 4., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
+                            .nb_steps_i = 8.1, .nb_steps_j = 4.1,
+                            .atmosRadius = 18., .atmosFalloff = 6., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
                             .mountainFrequency = 8., .mountainAmplitude = 8. };
 
     auto io = ImGui::GetIO();
