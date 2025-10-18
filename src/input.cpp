@@ -73,7 +73,7 @@ InputData Input::getInput()
     {
         ImGui::SliderFloat("sea level", &data.seaLevel, 0., 1.);
         ImGui::ColorEdit4("waterColor", data.waterColor);
-        ImGui::SliderFloat("refractionindex", &data.refractionindex, 1., 3.);
+        ImGui::SliderFloat("refractionindex", &data.refractionindex, 0.1, 3.);
         ImGui::SliderFloat("fresnel", &data.fresnel, 0., 1.);
     }
 

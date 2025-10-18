@@ -202,12 +202,14 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
         // refract
         clr = waterColor.rgb;
 
-        vec3 refracted = refract(rayDir, sphereNormal, refractionindex);
+        vec3 refracted = refract(normalize(rayDir), sphereNormal, refractionindex);
         vec2 dstToSeabed = raySphere(mtn.xyz, refracted, spherePos, radius);
         float refrCoef = abs(dot(normalize(refracted), sphereNormal));
+        if(dot(refracted, sphereNormal) >= 0.) return vec4(1., 0., 0., -1.);
         if(dstToSeabed.x > dstToSeabed.y)
         {
-            refrCoef = 0.; // perfect reflection if the refracted vector doesn't find the seabed (not physically based but looks pretty)
+            refrCoef = 0.1; // perfect reflection if the refracted vector doesn't find the seabed (not physically based but looks pretty)
+            return vec4(0., 1., 0., -1.);
         }
         else
         {
