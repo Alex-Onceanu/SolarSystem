@@ -80,7 +80,11 @@ int main()
 
         glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
         glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
+
         glUniform1f(glGetUniformLocation(program, "seaLevel"), inputData.seaLevel);
+        glUniform4f(glGetUniformLocation(program, "waterColor"), inputData.waterColor[0], inputData.waterColor[1], inputData.waterColor[2], inputData.waterColor[3]);
+        glUniform1f(glGetUniformLocation(program, "refractionindex"), inputData.refractionindex);
+        glUniform1f(glGetUniformLocation(program, "fresnel"), inputData.fresnel);
 
         glUniform1f(glGetUniformLocation(program, "ambientCoef"), inputData.ambientCoef);
         glUniform1f(glGetUniformLocation(program, "diffuseCoef"), inputData.diffuseCoef);

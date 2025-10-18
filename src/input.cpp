@@ -34,7 +34,7 @@ InputData Input::getInput()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    const int w = 380, h = 360;
+    const int w = 380, h = 400;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
@@ -43,7 +43,8 @@ InputData Input::getInput()
                             .planetPos{ 0.,-60.,50. }, .fov = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 28., .atmosFalloff = 7., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 8., .seaLevel = .3, 
+                            .mountainFrequency = 8., .mountainAmplitude = 8., 
+                            .seaLevel = .3, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 1.33, .fresnel = 0.1,
                             .ambientCoef = 0.04, .diffuseCoef = 0.75, .minDiffuse = 0.14, .penumbraCoef = 0.15,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 873. };
 
@@ -67,7 +68,13 @@ InputData Input::getInput()
     {
         ImGui::SliderFloat3("planet position", data.planetPos, -500., 500.);
         ImGui::SliderFloat("mountain height", &data.mountainAmplitude, 0.01, 20.);
+    }
+    if (ImGui::CollapsingHeader("Water"))
+    {
         ImGui::SliderFloat("sea level", &data.seaLevel, 0., 1.);
+        ImGui::ColorEdit4("waterColor", data.waterColor);
+        ImGui::SliderFloat("refractionindex", &data.refractionindex, 1., 3.);
+        ImGui::SliderFloat("fresnel", &data.fresnel, 0., 1.);
     }
 
     if (ImGui::CollapsingHeader("Light"))

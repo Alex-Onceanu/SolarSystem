@@ -32,7 +32,11 @@ uniform vec3 atmosColor;
 
 uniform float mountainAmplitude;
 uniform float mountainFrequency;
+
 uniform float seaLevel;
+uniform vec4 waterColor;
+uniform float refractionindex;
+uniform float fresnel;
 
 uniform float nbStars;
 uniform float starsDisplacement;
@@ -40,6 +44,7 @@ uniform float starSize;
 uniform float starSizeVariation;
 uniform float starVoidThreshold;
 uniform float starFlickering;
+
 
 
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
@@ -50,11 +55,11 @@ mat2 rot2D(float theta)
 }
 
 // see texturegen.cpp for yellow noise generation
-float noise(vec3 d)
+float noise(vec3 d, bool underwater)
 {
     vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
     float x = texture(opticalDepthTexture, uv).r;
-    return max(x, seaLevel);
+    return max(x, underwater ? 0. : seaLevel);
 }
 
 // Returns .x > .y if no intersection
@@ -151,9 +156,9 @@ vec3 background(vec3 d)
 
 // _____________________________________________________ PLANET ________________________________________________________
 
-vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety)
+vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater)
 {
-    float nb_iterations = 300.;
+    float nb_iterations = underwater ? 40. : 300.;
     float maxt = tPlanety;
     float dt = max(0.05, maxt / nb_iterations);
     float lh = 0.0;
@@ -165,7 +170,7 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
         float py = length(p - sphPos) - radius;
         vec3 d = normalize(p - sphPos);
         // d.xz *= rot2D(0.1 * time);
-        float h = mountainAmplitude * noise(d);
+        float h = mountainAmplitude * noise(d, underwater);
         if(py < h)
         {
             float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh); // <--- https://iquilezles.org/articles/terrainmarching/
@@ -177,53 +182,76 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
     return vec4(-1.);
 }
 
-vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
+// .w of return value is positive if there is a reflection
+vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
 {
-    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety);
+    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety, false);
     float n = mtn.w / mountainAmplitude;
 
-    if(n < 0.) return vec3(-1.);
+    if(n < 0.) return vec4(-1.);
     vec3 clr;
 
-    if(n <= seaLevel + 0.0001) clr = vec3(79., 76., 176.) / 255.;
-    else if(n < seaLevel + 0.05) clr = vec3(216., 197., 150.) / 255.;
-    else if(n < 0.6) clr = vec3(195.,146.,79.) / 255.;
-    else clr = vec3(159., 193., 100.) / 255.;
+    float shouldReflect = -1.;
 
     vec3 sphereNormal = normalize(mtn.xyz - spherePos);
     // sphereDiffuse doesn't account for mountains
     float sphereDiffuse = max(minDiffuse, dot(normalize(mtn.xyz - spherePos), normalize(lightSource - mtn.xyz)));
 
-    vec2 eps = vec2(0.0035, 0.);
+    if(n <= seaLevel + 0.0001)
+    {
+        // refract
+        clr = waterColor.rgb;
+
+        vec3 refracted = refract(rayDir, sphereNormal, refractionindex);
+        vec2 dstToSeabed = raySphere(mtn.xyz, refracted, spherePos, radius);
+        float refrCoef = abs(dot(normalize(refracted), sphereNormal));
+        if(dstToSeabed.x > dstToSeabed.y)
+        {
+            refrCoef = 0.; // perfect reflection if the refracted vector doesn't find the seabed (not physically based but looks pretty)
+        }
+        else
+        {
+            mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true);
+            clr = mix(clr, vec3(195.,146.,79.) / 255., waterColor.a);
+        }
+        shouldReflect = 1. - (fresnel + refrCoef * (1. - fresnel));
+    }
+    else if(n < seaLevel + 0.05) clr = vec3(216., 197., 150.) / 255.;
+    else if(n < 0.6) clr = vec3(195.,146.,79.) / 255.;
+    else clr = vec3(159., 193., 100.) / 255.;
+
+    vec2 eps = vec2(0.005, 0.);
 
     // derivative of implicit surface is (dF/dx, dF/dy, dF/dz) so here (-df/dx, 1, -df/dz)
-
     vec3 sample1 = mtn.xyz + eps.xyy;
-    float h1 = noise(normalize(sample1 - spherePos));
+    float h1 = noise(normalize(sample1 - spherePos), n <= seaLevel + 0.0001);
     vec3 sample1b = mtn.xyz - eps.xyy;
-    float h1b = noise(normalize(sample1b - spherePos));
+    float h1b = noise(normalize(sample1b - spherePos), n <= seaLevel + 0.0001);
     float gradx = (h1 - h1b) / (2. * eps.x);
 
     vec3 sample2 = mtn.xyz + eps.yyx;
-    float h2 = noise(normalize(sample2 - spherePos));\
+    float h2 = noise(normalize(sample2 - spherePos), n <= seaLevel + 0.0001);
     vec3 sample2b = mtn.xyz - eps.yyx;
-    float h2b = noise(normalize(sample2b - spherePos));
+    float h2b = noise(normalize(sample2b - spherePos), n <= seaLevel + 0.0001);
     float gradz = (h2 - h2b) / (2. * eps.x);
 
+    // TODO : this only works when the normal is aligned with (Oy), needs to be rotated
     vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
 
+    // TODO : no grass grows on slope
     // float grassOnSlope = 0.5;
     // if(abs(dot(localNormal, sphereNormal)) < grassOnSlope) 
     //     clr = vec3(195.,146.,79.) / 255.;
 
-    // clr = mix(clr, vec3(0.34, 0.34, 0.34), smoothstep(0.0, 0.3, abs(dot(localNormal, sphereNormal))));
+    // clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.8, abs(dot(localNormal, sphereNormal))));
 
     float diffuse = max(0.0, dot(localNormal, normalize(lightSource - mtn.xyz)));
-    float penumbra = smoothstep(0.1, 0.6, n); // trick for faking penumbra
+    float penumbra = smoothstep(0.1, 0.6, n); // trick for faking global illumination
 
     float light = diffuseCoef * diffuse * sphereDiffuse + penumbraCoef * penumbra;
+    vec3 shaded = light * clr + ambientCoef * normalize(vec3(1.) + atmosColor);
 
-    return light * clr + ambientCoef * normalize(vec3(1.) + atmosColor);
+    return vec4((shouldReflect < -0.1 ? 1. : (1. - shouldReflect)) * shaded, shouldReflect);
 }
 
 // _____________________________________________________ ATMOSPHERE ________________________________________________________
@@ -279,55 +307,75 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
 
 vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 {   
-    const int NB_PLANETS = 1;
-    vec3 planets[NB_PLANETS] = { planetPos };
-
-    float tMin = 1e5;
-    float tToPlanet = 1e5;
-    vec3 argmin = background(rayDir);
-
-    float planetRadius = 60.0;
-    for(int i = 0; i < NB_PLANETS; i++)
+    vec3 mapColor = vec3(0.);
+    vec3 r0 = rayPos, rd = rayDir;
+    int NB_MAX_REFLECTIONS = 2;
+    float reflectionCoef = 1., nextReflectionCoef = 1.;
+    // no recursivity in GLSL (so we have to use loops for reflection... until I code my own shader language (in some IGR class I hope))
+    for(int r = 0; r < NB_MAX_REFLECTIONS; r++)
     {
-        vec2 tPlanet = raySphere(rayPos, rayDir, planets[i], planetRadius + mountainAmplitude);
-        if(tPlanet.y > tPlanet.x && tPlanet.x < tMin && tPlanet.y >= 0.)
+        const int NB_PLANETS = 1;
+        bool shouldStop = true;
+
+        float tMin = 1e5;
+        float tToPlanet = 1e5;
+        vec3 argmin = background(rd);
+
+        float planetRadius = 60.0;
+
+        vec2 tPlanet = raySphere(r0, rd, planetPos, planetRadius + mountainAmplitude);
+        float tstart = max(0., tPlanet.x);
+        if(tPlanet.y > tPlanet.x && tstart < tMin && tPlanet.y >= 0.)
         {
-            vec3 mountainColor = shadePlanet(rayDir, rayPos + tPlanet.x * rayDir, 
-                            planets[i], planetRadius, sunPos, tPlanet.y - tPlanet.x);
+            vec4 mountainColor = shadePlanet(rd, r0 + tstart * rd, 
+                            planetPos, planetRadius, sunPos, tPlanet.y - tstart);
             if(mountainColor.x >= -0.1)
             {
-                tMin = tPlanet.x;
-                tToPlanet = tPlanet.x;
-                argmin = mountainColor;
+                tMin = tstart; // ah bon ?? et si tstart == 0 ???
+                tToPlanet = tstart;
+                argmin = mountainColor.rgb;
+
+                shouldStop = mountainColor.w < -0.1;
+                nextReflectionCoef = mountainColor.w;
             }
         }
-    }
 
-    vec2 corona = raySphere(rayPos, rayDir, sunPos, sunCoronaStrength + 10.);
-    if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
-    {
-        vec2 sun = raySphere(rayPos, rayDir, sunPos, 10.0);
-        if(sun.y > sun.x && sun.x < tMin && sun.y >= 0.)
+        vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + 10.);
+        if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
         {
-            tMin = sun.x;
-            argmin = 2.0 * sunColor;
+            vec2 sun = raySphere(r0, rd, sunPos, 10.0);
+            if(sun.y > sun.x && sun.x < tMin && sun.y >= 0.)
+            {
+                tMin = sun.x;
+                argmin = 2.0 * sunColor;
+            }
+            else
+            {
+                float md = (1.0 / 10.) * raySphereMinDist(r0, rd, sunPos, 10.).x + 1.;
+                float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
+                argmin = light * sunColor + (1.0 - light) * argmin;
+            }
         }
-        else
+
+        vec2 tAtmos = raySphere(r0, rd, planetPos, planetRadius + atmosRadius);
+        float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
+        if(dstThroughAtmosphere > 0.)
         {
-            float md = (1.0 / 10.) * raySphereMinDist(rayPos, rayDir, sunPos, 10.).x + 1.;
-            float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
-            argmin = light * sunColor + (1.0 - light) * argmin;
+            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, planetRadius, sunPos, argmin);
         }
-    }
 
-    vec2 tAtmos = raySphere(rayPos, rayDir, planets[0], planetRadius + atmosRadius);
-    float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
-    if(dstThroughAtmosphere > 0.)
-    {
-        return atmosphere(rayDir, rayPos + tAtmos.x * rayDir, dstThroughAtmosphere, planets[0], planetRadius, sunPos, argmin);
-    }
+        mapColor += argmin * reflectionCoef;
 
-    return argmin;
+        if(!shouldStop)
+        {
+            float dstToWater = raySphere(r0, rd, planetPos, planetRadius + seaLevel * mountainAmplitude).x;
+            r0 = r0 + dstToWater * rd;
+            rd = reflect(rd, normalize(r0 - planetPos));
+            reflectionCoef = nextReflectionCoef;
+        }
+        else break;
+    }
+    return mapColor;
 }
 
 void main()

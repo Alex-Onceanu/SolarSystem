@@ -19,12 +19,17 @@ struct InputData {
     float atmosColor[3];
     float mountainFrequency;
     float mountainAmplitude;
+
     float seaLevel;
+    float waterColor[4];
+    float refractionindex;
+    float fresnel;
 
     float ambientCoef;
     float diffuseCoef;
     float minDiffuse;
     float penumbraCoef;
+
 
     float nbStars;
     float starsDisplacement;
