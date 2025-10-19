@@ -147,7 +147,7 @@ vec3 background(vec3 d)
     float dst = (starSize + starSizeVariation * rand1 + starFlickering * rand2 * pow(sin(3. * time * rand3), 5.)) * a.y;
 
     float glow = 1. / (0.001 + dst * dst);
-    vec3 clr = 1. + 0.4 * randVector;
+    vec3 clr = 1. + 0.6 * randVector;
     float border = 1. - smoothstep(0.0, 0.015, centered.y); // temporary fix to the "neighbours" issue
 
     return tanh(glow * clr) * border;
@@ -253,7 +253,7 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
 
-    vec2 eps = vec2(0.009, 0.);
+    vec2 eps = vec2(0.02, 0.);
 
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
     vec3 sample1 = mtn.xyz + eps.xyy;

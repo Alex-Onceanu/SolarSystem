@@ -15,7 +15,7 @@ vec2 mousePos;
 Camera::Camera(GLFWwindow* __window)
     : window(__window)
 {
-    pos = vec3(0.0, 0.0, 0.0);
+    pos = vec3(-12.0, 20.0, -80.0);
     glfwSetKeyCallback(window, glfwKeyCallback);
     glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
     glfwSetCharCallback(window, glfwCharCallback);

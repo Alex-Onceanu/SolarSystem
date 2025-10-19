@@ -42,11 +42,11 @@ InputData Input::getInput()
     static InputData data{  .sunPos{ -10.,30.,260. }, .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 40.0,
                             .planetPos{ 0.,-60.,50. }, .fov = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
-                            .atmosRadius = 28., .atmosFalloff = 7., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
+                            .atmosRadius = 36., .atmosFalloff = 6.4, .atmosScattering = 1.4, .atmosColor{700., 530., 440.},
                             .mountainFrequency = 8., .mountainAmplitude = 13., 
-                            .seaLevel = .5, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
+                            .seaLevel = .6, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
                             .ambientCoef = 0.04, .diffuseCoef = 0.85, .minDiffuse = 0.22, .penumbraCoef = 0.07,
-                            .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 873. };
+                            .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 1073. };
 
     auto io = ImGui::GetIO();
     ImGui::Text("FPS: %.1f", io.Framerate);
@@ -102,7 +102,7 @@ InputData Input::getInput()
         ImGui::SliderFloat("starSize", &data.starSize, 500., 10000.);
         ImGui::SliderFloat("starSizeVariation", &data.starSizeVariation, 0., 1000.);
         ImGui::SliderFloat("starVoidThreshold", &data.starVoidThreshold, 0., 1.);
-        ImGui::SliderFloat("starFlickering", &data.starFlickering, 0., 1000.);
+        ImGui::SliderFloat("starFlickering", &data.starFlickering, 0., 2000.);
     }
 
     ImGui::End();

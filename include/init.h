@@ -12,8 +12,8 @@
 #define LOW_RES_W 1280
 #define LOW_RES_H 720
 
-// #define LOW_RES_W (RESOLUTION_W / 4)
-// #define LOW_RES_H (RESOLUTION_H / 4)
+// #define LOW_RES_W (RESOLUTION_W / 2)
+// #define LOW_RES_H (RESOLUTION_H / 2)
 
 #ifdef __cplusplus
 extern "C" {

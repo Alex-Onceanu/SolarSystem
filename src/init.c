@@ -198,7 +198,7 @@ unsigned int init(GLFWwindow** window)
 {
     if (!glfwInit()) return 0;
 
-    *window = glfwCreateWindow(RESOLUTION_W, RESOLUTION_H, "This is not outer wilds yet", NULL, NULL);
+    *window = glfwCreateWindow(RESOLUTION_W, RESOLUTION_H, "This will soon be outer wilds", NULL, NULL);
     if (window == NULL)
     {
         printf("Error in glfwCreateWindow !\n");
