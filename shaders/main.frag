@@ -46,7 +46,6 @@ uniform float starVoidThreshold;
 uniform float starFlickering;
 
 
-
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
 mat2 rot2D(float theta)
@@ -182,6 +181,46 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
     return vec4(-1.);
 }
 
+// sum of 3 propagative waves based on angle and time
+float waveHeight(vec3 gwhere)
+{
+    float waveAmp = 0.14;
+    float k0 = dot(gwhere, normalize(vec3(1.1, 0.8, 1.1)));
+    float k1 = dot(gwhere, normalize(vec3(-1., 1.2, 0.9)));
+    float k2 = dot(gwhere, normalize(vec3(-0.8, -0.3, -0.5)));
+    float k3 = dot(gwhere, normalize(vec3(0.4, -0.6, -0.3)));
+    float A0 = 0.20 * 0.5 * (1. + k0 * k0);
+    float A1 = 0.16 * 0.5 * (1. + k1 * k1);
+    float A2 = 0.09 * 0.5 * (1. + k2 * k2);
+    float A3 = 0.05 * 0.5 * (1. + k3 * k3);   
+    return  waveAmp *(A0 * (1. + sin(13. * k0 + 0.9 * time))
+                    + A1 * (1. + cos(16. * k1 + 1.2 * time))
+                    + A2 * (1. + sin(30. * k2 + 3.4 * time))
+                    + A3 * (1. + cos(45. * k3 + 6.0 * time))); 
+}
+
+// derivative of waveHeight
+vec3 waveNormal(vec3 gwhere)
+{
+    vec2 eps = vec2(0.005, 0.);
+
+    // derivative of implicit surface is (dF/dx, dF/dy, dF/dz) so here (-df/dx, 1, -df/dz)
+    vec3 sample1 = normalize(gwhere + eps.xyy);
+    float h1 = waveHeight(sample1);
+    vec3 sample1b = normalize(gwhere - eps.xyy);
+    float h1b = waveHeight(sample1b);
+    float gradx = (h1 - h1b) / (2. * eps.x);
+
+    vec3 sample2 = normalize(gwhere + eps.yyx);
+    float h2 = waveHeight(sample2);
+    vec3 sample2b = normalize(gwhere - eps.yyx);
+    float h2b = waveHeight(sample2b);
+    float gradz = (h2 - h2b) / (2. * eps.x);
+
+    // TODO : this only works when the normal is aligned with (Oy), needs to be rotated
+    return normalize(gwhere + vec3(-gradx, 1., -gradz));
+}
+
 // .w of return value is positive if there is a reflection
 vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
 {
@@ -197,29 +236,22 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     // sphereDiffuse doesn't account for mountains
     float sphereDiffuse = max(minDiffuse, dot(normalize(mtn.xyz - spherePos), normalize(lightSource - mtn.xyz)));
 
-    if(n <= seaLevel + 0.0001)
+    if(n <= seaLevel + 0.0001) // water
     {
-        // refract
         clr = waterColor.rgb;
+        vec3 wn = waveNormal(sphereNormal);
 
-        vec3 refracted = refract(normalize(rayDir), sphereNormal, refractionindex);
+        vec3 refracted = refract(normalize(rayDir), wn, refractionindex);
         vec2 dstToSeabed = raySphere(mtn.xyz, refracted, spherePos, radius);
         float refrCoef = abs(dot(normalize(refracted), sphereNormal));
-        if(dot(refracted, sphereNormal) >= 0.) return vec4(1., 0., 0., -1.);
-        if(dstToSeabed.x > dstToSeabed.y)
-        {
-            refrCoef = 0.1; // perfect reflection if the refracted vector doesn't find the seabed (not physically based but looks pretty)
-            return vec4(0., 1., 0., -1.);
-        }
-        else
-        {
-            mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true);
-            clr = mix(clr, vec3(195.,146.,79.) / 255., waterColor.a);
-        }
-        shouldReflect = 1. - (fresnel + refrCoef * (1. - fresnel));
+
+        mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true);
+        clr = mix(clr, vec3(195.,146.,79.) / 255., waterColor.a);
+
+        shouldReflect = 1. - pow(refrCoef, fresnel);
     }
     else if(n < seaLevel + 0.05) clr = vec3(216., 197., 150.) / 255.;
-    else if(n < 0.6) clr = vec3(195.,146.,79.) / 255.;
+    else if(n < 0.7) clr = vec3(195.,146.,79.) / 255.;
     else clr = vec3(159., 193., 100.) / 255.;
 
     vec2 eps = vec2(0.005, 0.);
@@ -244,7 +276,6 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     // float grassOnSlope = 0.5;
     // if(abs(dot(localNormal, sphereNormal)) < grassOnSlope) 
     //     clr = vec3(195.,146.,79.) / 255.;
-
     // clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.8, abs(dot(localNormal, sphereNormal))));
 
     float diffuse = max(0.0, dot(localNormal, normalize(lightSource - mtn.xyz)));
@@ -372,7 +403,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         {
             float dstToWater = raySphere(r0, rd, planetPos, planetRadius + seaLevel * mountainAmplitude).x;
             r0 = r0 + dstToWater * rd;
-            rd = reflect(rd, normalize(r0 - planetPos));
+            rd = reflect(rd, waveNormal(normalize(r0 - planetPos)));
             reflectionCoef = nextReflectionCoef;
         }
         else break;

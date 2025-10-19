@@ -43,9 +43,9 @@ InputData Input::getInput()
                             .planetPos{ 0.,-60.,50. }, .fov = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 28., .atmosFalloff = 7., .atmosScattering = 1.5, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 8., 
-                            .seaLevel = .3, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 1.33, .fresnel = 0.1,
-                            .ambientCoef = 0.04, .diffuseCoef = 0.75, .minDiffuse = 0.14, .penumbraCoef = 0.15,
+                            .mountainFrequency = 8., .mountainAmplitude = 13., 
+                            .seaLevel = .5, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
+                            .ambientCoef = 0.04, .diffuseCoef = 0.85, .minDiffuse = 0.22, .penumbraCoef = 0.07,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 873. };
 
     auto io = ImGui::GetIO();
@@ -74,7 +74,7 @@ InputData Input::getInput()
         ImGui::SliderFloat("sea level", &data.seaLevel, 0., 1.);
         ImGui::ColorEdit4("waterColor", data.waterColor);
         ImGui::SliderFloat("refractionindex", &data.refractionindex, 0.1, 3.);
-        ImGui::SliderFloat("fresnel", &data.fresnel, 0., 1.);
+        ImGui::SliderFloat("fresnel", &data.fresnel, 0.1, 5.);
     }
 
     if (ImGui::CollapsingHeader("Light"))
