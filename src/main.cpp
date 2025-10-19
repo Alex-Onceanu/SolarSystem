@@ -17,6 +17,7 @@ int main()
 
     auto earthTexture = init_texture("../assets/eart.ppm");
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
+    auto cloudsTexture = init_3D_PGM("../assets/clouds.pgm");
 
     Input::init(window);
     auto camera = std::make_unique<Camera>(window);
@@ -56,6 +57,10 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, opticalDepthTexture);
         glUniform1i(glGetUniformLocation(program, "opticalDepthTexture"), 1);
+
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_3D, cloudsTexture);
+        glUniform1i(glGetUniformLocation(program, "cloudsTexture"), 2);
 
         auto inputData = Input::getInput();
         glUniform1f(glGetUniformLocation(program, "time"), elapsedTime);
@@ -97,6 +102,8 @@ int main()
         glUniform1f(glGetUniformLocation(program, "starSizeVariation"), inputData.starSizeVariation);
         glUniform1f(glGetUniformLocation(program, "starVoidThreshold"), inputData.starVoidThreshold);
         glUniform1f(glGetUniformLocation(program, "starFlickering"), inputData.starFlickering);
+
+        glUniform1f(glGetUniformLocation(program, "cloudsMaxAltitude"), inputData.cloudsMaxAltitude);
 
         camera->update(dt);
 

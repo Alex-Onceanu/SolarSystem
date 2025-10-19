@@ -10,9 +10,10 @@
 extern "C" {
 #endif
 
-unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *height);
-
+// works for both .ppm and .pgm but only with 2D textures
 unsigned int init_texture(const char* path);
+// works only for .pgm 3D textures
+unsigned int init_3D_PGM(const char* path);
 
 // Renvoie un shader en c_str à partir de son fichier source
 char *read_shader(const char *filename);

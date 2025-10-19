@@ -30,13 +30,14 @@ struct InputData {
     float minDiffuse;
     float penumbraCoef;
 
-
     float nbStars;
     float starsDisplacement;
     float starSize;
     float starSizeVariation;
     float starVoidThreshold;
     float starFlickering;
+
+    float cloudsMaxAltitude;
 };
 
 class Input

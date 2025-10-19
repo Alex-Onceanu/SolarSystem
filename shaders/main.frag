@@ -23,6 +23,7 @@ uniform float penumbraCoef;
 
 uniform sampler2D earthTexture;
 uniform sampler2D opticalDepthTexture;
+uniform sampler3D cloudsTexture;
 
 uniform float NB_STEPS_i;
 uniform float NB_STEPS_j;
@@ -45,6 +46,7 @@ uniform float starSizeVariation;
 uniform float starVoidThreshold;
 uniform float starFlickering;
 
+uniform float cloudsMaxAltitude;
 
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
@@ -310,7 +312,6 @@ float opticalDepth(vec3 rayDir, vec3 rayPos, float rayLength, float nb_steps, ve
     return opticalDepth;
 }
 
-
 vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radius, vec3 lightSource, vec3 originalColor)
 {
     vec3 totalLight = vec3(0.);
@@ -336,6 +337,28 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
     return totalLight + exp(-toEyeOpticalDepth) * originalColor;
 }
 
+// _____________________________________________________ CLOUDS ________________________________________________________
+
+vec3 clouds(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radius, vec3 lightSource, vec3 originalColor)
+{
+    float density = 0.;
+    float NB_STEPS = 100.;
+    float dt = dist / NB_STEPS;
+    float tmax = 0.;
+    for(float t = 0.; t <= dist; t += dt)
+    {
+        vec3 p = start + t * rayDir;
+        float localDensity = pow(texture(cloudsTexture, (p - planetPos) / 128.).r, 2.);
+        if(localDensity > 0.6){
+            density += localDensity * dt;
+            tmax += dt;
+        }
+    }
+    float transmittance = exp(-density);
+    // return originalColor * transmittance;
+    return mix(vec3(1.), originalColor, transmittance);
+}
+
 // _____________________________________________________ MAIN ________________________________________________________
 
 vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
@@ -352,7 +375,8 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 
         float tMin = 1e5;
         float tToPlanet = 1e5;
-        vec3 argmin = background(rd);
+        vec3 starrySky = background(rd);
+        vec3 argmin = starrySky;
 
         float planetRadius = 60.0;
 
@@ -373,6 +397,35 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
+        vec2 tAtmos = raySphere(r0, rd, planetPos, planetRadius + atmosRadius);
+        float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
+        if(dstThroughAtmosphere > 0.)
+        {
+            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, planetRadius, sunPos, argmin);
+        }
+
+        // similarly, if we intersect the "cloud zone", we start raymarching
+        if(tMin >= 1e5)
+        {
+            float cloudsAltitude = 60.;
+            vec2 tClouds = raySphere(r0, rd, planetPos, planetRadius + cloudsMaxAltitude);
+            vec2 toSubClouds = raySphere(r0, rd, planetPos, planetRadius + cloudsAltitude);
+            float dstThroughClouds = 0.;
+            float tcstart = 0.;
+            if(toSubClouds.x < 0.) {
+                dstThroughClouds = tClouds.y - toSubClouds.y;
+                tcstart = toSubClouds.y;
+            }
+            else { dstThroughClouds = min(tClouds.y, max(0., toSubClouds.x) - max(0., tClouds.x));
+                tcstart = tClouds.x;
+            }
+            if(dstThroughClouds > 0.)
+            {
+                argmin = clouds(rd, r0 + tcstart * rd, dstThroughClouds, planetPos, planetRadius, sunPos, argmin);
+            }
+        }
+
+
         vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + 10.);
         if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
         {
@@ -388,13 +441,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                 float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
                 argmin = light * sunColor + (1.0 - light) * argmin;
             }
-        }
-
-        vec2 tAtmos = raySphere(r0, rd, planetPos, planetRadius + atmosRadius);
-        float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
-        if(dstThroughAtmosphere > 0.)
-        {
-            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, planetRadius, sunPos, argmin);
         }
 
         mapColor += argmin * reflectionCoef;

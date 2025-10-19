@@ -10,9 +10,11 @@
 #define ATTR_PER_VERTEX 3
 #define NB_INDEX 6
 
+unsigned int dejavu = 0;
+
 // written in one of my previous projects 2 years ago
 // I adapted it so it can also read grey-scale images (.pgm format)
-unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *height)
+unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *height, int *depth)
 {
     FILE *fichier = fopen(filename_ppm, "r");
     if (fichier == NULL)
@@ -35,7 +37,11 @@ unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *h
     }
 
     int max_color = 255;
-    if (fscanf(fichier, "%d %d %d", width, height, &max_color) != 3)
+    int ff;
+    if(depth) ff = fscanf(fichier, "%d %d %d %d", width, height, depth, &max_color);
+    else ff = fscanf(fichier, "%d %d %d", width, height, &max_color);
+
+    if (ff != (depth ? 4 : 3))
     {
         printf("Probleme de lecture du header ppm...");
         fclose(fichier);
@@ -50,7 +56,7 @@ unsigned char *read_ppm(int is_pgm, const char *filename_ppm, int *width, int *h
 
     // Tout le fichier est lu d'un seul coup avec un fread approprié
 
-    int nb_px = (*width) * (*height);
+    int nb_px = (*width) * (*height) * (depth ? *depth : 1);
     unsigned char *res = malloc((is_pgm ? 1 : 3) * nb_px * sizeof(unsigned char));
     fread(res, sizeof(unsigned char), (is_pgm ? 1 : 3) * nb_px, fichier);
 
@@ -62,20 +68,17 @@ unsigned int init_texture(const char* path)
 {
     if(!path || !*path || !path[1]) return -1;
 
-    static unsigned int dejavu = 0;
     int width, height;
     int g = 0; for(; path[g]; g++);
     int is_pgm = path[g - 2] == 'g';
-    unsigned char *data = read_ppm(is_pgm, path, &width, &height);
+    unsigned char *data = read_ppm(is_pgm, path, &width, &height, NULL);
 
     // Chaque texture chargée est associée à un uint, qu'on stocke dans un
     // unsigned int[], ici comme il y en a 1 seul on envoie &texture
     unsigned int texture_id;
     // Génération du texture object
     glGenTextures(1, &texture_id);
-
     glActiveTexture(GL_TEXTURE0 + dejavu++);
-
     glBindTexture(GL_TEXTURE_2D, texture_id);
 
     if(!is_pgm)
@@ -91,13 +94,35 @@ unsigned int init_texture(const char* path)
     else
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, data);
-
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
 
+    return texture_id;
+}
+
+unsigned int init_3D_PGM(const char* path)
+{
+    if(!path || !*path || !path[1]) return -1;
+
+    int width, height, depth;
+    unsigned char *data = read_ppm(1, path, &width, &height, &depth);
+
+    // Chaque texture chargée est associée à un uint, qu'on stocke dans un
+    // unsigned int[], ici comme il y en a 1 seul on envoie &texture
+    unsigned int texture_id;
+    // Génération du texture object
+    glGenTextures(1, &texture_id);
+    glActiveTexture(GL_TEXTURE0 + dejavu++);
+    glBindTexture(GL_TEXTURE_3D, texture_id);
+
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, width, height, depth, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     return texture_id;
 }
