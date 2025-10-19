@@ -157,9 +157,9 @@ vec3 background(vec3 d)
 
 vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater)
 {
-    float nb_iterations = underwater ? 40. : 300.;
+    float nb_iterations = underwater ? 40. : 500.;
     float maxt = tPlanety;
-    float dt = max(0.05, maxt / nb_iterations);
+    float dt = max(0.025, maxt / nb_iterations);
     float lh = 0.0;
     float ly = 0.0;
 
@@ -204,7 +204,6 @@ vec3 waveNormal(vec3 gwhere)
 {
     vec2 eps = vec2(0.005, 0.);
 
-    // derivative of implicit surface is (dF/dx, dF/dy, dF/dz) so here (-df/dx, 1, -df/dz)
     vec3 sample1 = normalize(gwhere + eps.xyy);
     float h1 = waveHeight(sample1);
     vec3 sample1b = normalize(gwhere - eps.xyy);
@@ -250,13 +249,13 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
 
         shouldReflect = 1. - pow(refrCoef, fresnel);
     }
-    else if(n < seaLevel + 0.05) clr = vec3(216., 197., 150.) / 255.;
-    else if(n < 0.7) clr = vec3(195.,146.,79.) / 255.;
-    else clr = vec3(159., 193., 100.) / 255.;
+    else if(n < seaLevel + 0.1) clr = vec3(216., 197., 150.) / 255.;
+    else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
+    else clr = vec3(157., 161., 154.) / 255.;
 
-    vec2 eps = vec2(0.005, 0.);
+    vec2 eps = vec2(0.009, 0.);
 
-    // derivative of implicit surface is (dF/dx, dF/dy, dF/dz) so here (-df/dx, 1, -df/dz)
+    // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
     vec3 sample1 = mtn.xyz + eps.xyy;
     float h1 = noise(normalize(sample1 - spherePos), n <= seaLevel + 0.0001);
     vec3 sample1b = mtn.xyz - eps.xyy;

@@ -191,7 +191,6 @@ unsigned int global_program;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    glViewport(0, 0, width, height);
     glUniform1f(glGetUniformLocation(global_program, "aspectRatio"), (float)(width) / (float)(height));
 }
 
@@ -208,6 +207,7 @@ unsigned int init(GLFWwindow** window)
     }
 
     glfwMakeContextCurrent(*window);
+    glfwSetWindowSizeLimits(*window, LOW_RES_W, LOW_RES_H, GLFW_DONT_CARE, GLFW_DONT_CARE);
     // glfwSwapInterval(0);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -237,4 +237,20 @@ unsigned int init(GLFWwindow** window)
     setupMesh();
 
     return global_program;
+}
+
+void generateLowResBuf(unsigned int* frameBuf, unsigned int* outTexture)
+{
+    glGenFramebuffers(1, frameBuf);
+    glBindFramebuffer(GL_FRAMEBUFFER, *frameBuf);
+
+    glGenTextures(1, outTexture);
+    glBindTexture(GL_TEXTURE_2D, *outTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, LOW_RES_W, LOW_RES_H, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *outTexture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        printf("Erreur : FBO incomplet\n");
 }

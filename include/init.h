@@ -6,6 +6,15 @@
 #define RESOLUTION_W 1366
 #define RESOLUTION_H 768
 
+// #define LOW_RES_W 683
+// #define LOW_RES_H 384
+
+#define LOW_RES_W 1280
+#define LOW_RES_H 720
+
+// #define LOW_RES_W (RESOLUTION_W / 4)
+// #define LOW_RES_H (RESOLUTION_H / 4)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,6 +32,9 @@ int create_program(const char *vertex_shader, const char *fragment_shader);
 
 // Initialise le contexte OpenGL, compile les shaders et renvoie le program ID
 unsigned int init(GLFWwindow** window);
+
+// first render pass will be in a low res texture
+void generateLowResBuf(unsigned int* frameBuf, unsigned int* outTexture);
 
 #ifdef __cplusplus
 }

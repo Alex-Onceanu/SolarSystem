@@ -28,6 +28,9 @@ int main()
 
     glUniform1f(glGetUniformLocation(program, "aspectRatio"), static_cast<float>(RESOLUTION_W) / static_cast<float>(RESOLUTION_H));
 
+    unsigned int frameBuf, outTexture;
+    generateLowResBuf(&frameBuf, &outTexture);
+
     // Otherwise we see a pink screen as very first frame when launching the program
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -106,8 +109,19 @@ int main()
         vec2 camTheta = camera->getAngle();
         glUniform2f(glGetUniformLocation(program ,"cameraRotation"), camTheta.x, camTheta.y);
 
+        int W, H;
+        glfwGetWindowSize(window, &W, &H);
+
         // Draw
+        glBindFramebuffer(GL_FRAMEBUFFER, frameBuf);
+        glViewport(0, 0, LOW_RES_W, LOW_RES_H);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuf);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, LOW_RES_W, LOW_RES_H, 0, 0, W, H, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
         Input::renderInterface();
 
