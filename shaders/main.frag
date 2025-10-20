@@ -157,9 +157,9 @@ vec3 background(vec3 d)
 
 vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater)
 {
-    float nb_iterations = underwater ? 40. : 500.;
+    float nb_iterations = underwater ? 30. : 250.;
     float maxt = tPlanety;
-    float dt = max(0.025, maxt / nb_iterations);
+    float dt = max(0.05, maxt / nb_iterations);
     float lh = 0.0;
     float ly = 0.0;
 

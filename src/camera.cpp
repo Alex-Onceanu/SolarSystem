@@ -4,9 +4,10 @@
 #include "imgui.h"
 
 #include <iostream>
+#include <algorithm>
 
 constexpr float PI = 3.141592f;
-constexpr size_t NB_KEYS = 7;
+constexpr size_t NB_KEYS = 8;
 
 bool isKeyPressed[NB_KEYS];
 bool shouldHideCursor = true;
@@ -48,8 +49,8 @@ void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int acti
 {   
     bool isPressed = action == GLFW_PRESS || action == GLFW_REPEAT;
 
-    int everyKey[NB_KEYS]{ GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, GLFW_KEY_LEFT_ALT, GLFW_KEY_SPACE, GLFW_KEY_LEFT_SHIFT };
-    int altKeys[NB_KEYS] { GLFW_KEY_UP, GLFW_KEY_LEFT, GLFW_KEY_DOWN, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT_ALT, -1, -1};
+    int everyKey[NB_KEYS]{ GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, GLFW_KEY_LEFT_ALT, GLFW_KEY_SPACE, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_E };
+    int altKeys[NB_KEYS] { GLFW_KEY_UP, GLFW_KEY_LEFT, GLFW_KEY_DOWN, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT_ALT, -1, -1, -1};
 
     for(int i = 0; i < NB_KEYS; i++)
     {
@@ -64,6 +65,7 @@ void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int acti
         glfwSetCursorPos(window, 0.0, 0.0);
     }
 }
+
 void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
 {
     if(isKeyPressed[4] or not shouldHideCursor)
@@ -75,7 +77,7 @@ void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
         mousePos.x = static_cast<float>(xpos), mousePos.y = static_cast<float>(ypos);
 }
 
-void Camera::update(float dt)
+void Camera::update(float dt, std::vector<PlanetData> planets)
 {
     if(isKeyPressed[4] or not shouldHideCursor)
     {
@@ -83,30 +85,52 @@ void Camera::update(float dt)
     }
     else
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-        if(glfwRawMouseMotionSupported())
-        { 
-            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-        }
+        // if(glfwRawMouseMotionSupported())
+        // { 
+        //     glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        // }
         glfwSetCursorPos(window, 0., 0.);
     }
 
+    // find closest planet
+    PlanetData closest = { .p = vec3(INFINITY, INFINITY, INFINITY), .radius = 1., .mass = 1. };
+    for(auto e : planets)
+    {
+        if((e.p - pos).length() < (closest.p - pos).length()) 
+            closest = e;
+    }
 
-    vec3 speed = vec3(0.0, 0.0, 0.0);
+    // std::cout << (closest.p - pos).length() << std::endl;
+
+    const float playerHeight = 3.;
+    const float G = 1800000.;
+    vec3 Fdir = pos - closest.p;
+    Fdir.normalized();
+    vec3 F = Fdir * (-G * closest.mass / (closest.p - pos).dot(closest.p - pos));
+    if((closest.p - pos).length() > closest.radius + playerHeight)
+        speed += F * dt;
+    else
+        speed = vec3(0., 0., 0.);
+
+
+    vec3 tmpSpeed(0., 0., 0.);
 
     // this code is right-handed, but OpenGl's NDC are left-handed for some reason
-    if(isKeyPressed[0]) speed.z -= 1.0;
-    if(isKeyPressed[2]) speed.z += 1.0;
+    if(isKeyPressed[0]) tmpSpeed.z -= 1.0;
+    if(isKeyPressed[2]) tmpSpeed.z += 1.0;
 
-    if(isKeyPressed[1]) speed.x -= 1.0;
-    if(isKeyPressed[3]) speed.x += 1.0;
-    if(isKeyPressed[5]) speed.y += 1.0;
-    if(isKeyPressed[6]) speed.y -= 1.0;
+    if(isKeyPressed[1]) tmpSpeed.x -= 1.0;
+    if(isKeyPressed[3]) tmpSpeed.x += 1.0;
+    if(isKeyPressed[5]) tmpSpeed.y += 1.0;
+    if(isKeyPressed[6]) tmpSpeed.y -= 1.0;
 
-    speed.normalized();
-    speed *= speedRef;
+    tmpSpeed.normalized();
+    tmpSpeed *= speedRef;
+
+    if(tmpSpeed.length() > 0.01) speed = vec3(0., 0., 0.);
 
     vec3 direction = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
     vec3 right = vec3(cosf(theta.x), 0., sinf(theta.x));
@@ -119,7 +143,11 @@ void Camera::update(float dt)
 
     // std::cout << "front : " << direction << "\nright : " << right << "\nup : " << up << std::endl;
 
-    pos += right * speed.x * dt;
-    pos += up * speed.y * dt;
-    pos += direction * speed.z * dt;
+    speed += right * tmpSpeed.x + up * tmpSpeed.y + direction * tmpSpeed.z;
+
+    if(isKeyPressed[7]) speed -= direction * (speedRef / 30.);
+
+    pos += speed * dt;
+
+    speed -= right * tmpSpeed.x + up * tmpSpeed.y + direction * tmpSpeed.z;
 }

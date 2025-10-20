@@ -101,7 +101,10 @@ int main()
         glUniform1f(glGetUniformLocation(program, "starVoidThreshold"), inputData.starVoidThreshold);
         glUniform1f(glGetUniformLocation(program, "starFlickering"), inputData.starFlickering);
 
-        camera->update(dt);
+        std::vector<PlanetData> pdv;
+        PlanetData p1 = { .p = vec3(inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]), .radius = 73., .mass = 1. };
+        pdv.push_back(p1);
+        camera->update(dt, pdv);
 
         vec3 camPos = camera->getPos();
         glUniform3f(glGetUniformLocation(program ,"cameraPos"), camPos.x, camPos.y, camPos.z);
@@ -111,6 +114,7 @@ int main()
 
         int W, H;
         glfwGetWindowSize(window, &W, &H);
+        if(W == 0 or H == 0) std::cout << "nul" << std::endl;
 
         // Draw
         glBindFramebuffer(GL_FRAMEBUFFER, frameBuf);

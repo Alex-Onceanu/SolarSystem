@@ -2,13 +2,23 @@
 #define CAMERA_H
 
 #include <GLFW/glfw3.h>
+
+#include <vector>
+
 #include "math.hpp"
+
+struct PlanetData
+{
+    vec3 p;
+    float radius;
+    float mass;
+};
 
 class Camera
 {
 public:
     Camera(GLFWwindow* __window);
-    void update(float dt);
+    void update(float dt, std::vector<PlanetData> planets);
 
     vec3 getPos() { return pos; }
     vec2 getAngle() { return theta; }
@@ -17,11 +27,14 @@ public:
     static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void glfwCharCallback(GLFWwindow* window, unsigned int c);
+
+
 private:
     GLFWwindow* window{};
 
     vec3 pos{};
-    const float speedRef = 50.0;
+    vec3 speed{};
+    const float speedRef = 200.0;
 
     vec2 theta{};
 };
