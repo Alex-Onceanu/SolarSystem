@@ -83,13 +83,13 @@ void Camera::update(float dt)
     }
     else
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-        if(glfwRawMouseMotionSupported())
-        { 
-            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-        }
+        // if(glfwRawMouseMotionSupported())
+        // { 
+        //     glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        // }
         glfwSetCursorPos(window, 0., 0.);
     }
 

@@ -196,6 +196,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 unsigned int init(GLFWwindow** window)
 {
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
     if (!glfwInit()) return 0;
 
     *window = glfwCreateWindow(RESOLUTION_W, RESOLUTION_H, "This will soon be outer wilds", NULL, NULL);
