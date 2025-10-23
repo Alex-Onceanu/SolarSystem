@@ -19,7 +19,7 @@ int main()
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init(window);
-    auto camera = std::make_unique<Camera>(window);
+    auto camera = std::make_unique<Camera>(window, vec3(0.0, -280.0, -160.0), vec3(0.,-280.,200.));
 
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;
@@ -64,12 +64,14 @@ int main()
         glUniform1f(glGetUniformLocation(program, "time"), elapsedTime);
         glUniform3f(glGetUniformLocation(program, "sunPos"), 
             inputData.sunPos[0], inputData.sunPos[1], inputData.sunPos[2]);
+        glUniform1f(glGetUniformLocation(program, "sunRadius"), inputData.sunRadius);
         glUniform3f(glGetUniformLocation(program, "sunColor"), 
             inputData.sunColor[0], inputData.sunColor[1], inputData.sunColor[2]);
         glUniform1f(glGetUniformLocation(program, "sunCoronaStrength"), 
             inputData.sunCoronaStrength);
         glUniform3f(glGetUniformLocation(program, "planetPos"), 
             inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]);
+        glUniform1f(glGetUniformLocation(program, "uPlanetRadius"), inputData.planetRadius);
         glUniform1f(glGetUniformLocation(program, "fov"), inputData.fov * 3.1415 / 180.);
 
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_i"), inputData.nb_steps_i);
@@ -101,13 +103,18 @@ int main()
         glUniform1f(glGetUniformLocation(program, "starVoidThreshold"), inputData.starVoidThreshold);
         glUniform1f(glGetUniformLocation(program, "starFlickering"), inputData.starFlickering);
 
-        camera->update(dt);
+        std::vector<PlanetData> pdv;
+        PlanetData p1 = { .p = vec3(inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]), .radius = 30. + 300., .mass = inputData.planetMass };
+        pdv.push_back(p1);
+        camera->setSpeedRef(inputData.cameraSpeed);
+        camera->update(dt, pdv);
 
         vec3 camPos = camera->getPos();
         glUniform3f(glGetUniformLocation(program ,"cameraPos"), camPos.x, camPos.y, camPos.z);
 
-        vec2 camTheta = camera->getAngle();
-        glUniform2f(glGetUniformLocation(program ,"cameraRotation"), camTheta.x, camTheta.y);
+        float view[9];
+        camera->getView(view);
+        glUniformMatrix3fv(glGetUniformLocation(program ,"view"), 9, false, view);
 
         int W, H;
         glfwGetWindowSize(window, &W, &H);

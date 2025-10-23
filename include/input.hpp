@@ -5,11 +5,16 @@
 
 struct InputData {
     float sunPos[3];
+    float sunRadius;
     float sunColor[3];
     float sunCoronaStrength;
 
     float planetPos[3];
+    float planetRadius;
+    float planetMass;
+
     float fov;
+    float cameraSpeed;
 
     float nb_steps_i;
     float nb_steps_j;
@@ -29,7 +34,6 @@ struct InputData {
     float diffuseCoef;
     float minDiffuse;
     float penumbraCoef;
-
 
     float nbStars;
     float starsDisplacement;

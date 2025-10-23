@@ -21,7 +21,7 @@ set(PROJECT_SOURCES
             dependencies/imgui/backends/imgui_impl_opengl3.cpp)
 
 
-find_package(glfw3 3.2 REQUIRED)
+add_subdirectory(${PROJECT_DIR}/dependencies/glfw)
  
 include_directories(${PROJECT_INCLUDE_DIR})
 

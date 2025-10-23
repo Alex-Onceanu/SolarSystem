@@ -5,16 +5,19 @@ layout(location = 0) out vec4 outColor;
 
 uniform float time;
 uniform float fov;
+uniform mat3 view;
 
 uniform vec3 cameraPos;
 uniform vec2 cameraRotation;
 
 uniform vec3 sunPos;
+uniform float sunRadius;
 uniform vec3 sunColor;
 uniform float sunCoronaStrength;
 uniform float aspectRatio;
 
 uniform vec3 planetPos;
+uniform float uPlanetRadius;
 
 uniform float ambientCoef;
 uniform float diffuseCoef;
@@ -159,7 +162,7 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
 {
     float nb_iterations = underwater ? 40. : 500.;
     float maxt = tPlanety;
-    float dt = max(0.025, maxt / nb_iterations);
+    float dt = max(0.045, maxt / nb_iterations);
     float lh = 0.0;
     float ly = 0.0;
 
@@ -353,17 +356,15 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         float tToPlanet = 1e5;
         vec3 argmin = background(rd);
 
-        float planetRadius = 60.0;
-
-        vec2 tPlanet = raySphere(r0, rd, planetPos, planetRadius + mountainAmplitude);
+        vec2 tPlanet = raySphere(r0, rd, planetPos, uPlanetRadius + mountainAmplitude);
         float tstart = max(0., tPlanet.x);
         if(tPlanet.y > tPlanet.x && tstart < tMin && tPlanet.y >= 0.)
         {
             vec4 mountainColor = shadePlanet(rd, r0 + tstart * rd, 
-                            planetPos, planetRadius, sunPos, tPlanet.y - tstart);
+                            planetPos, uPlanetRadius, sunPos, tPlanet.y - tstart);
             if(mountainColor.x >= -0.1)
             {
-                tMin = tstart; // ah bon ?? et si tstart == 0 ???
+                tMin = tstart; // not sure about that though. what if tstart == 0 ???
                 tToPlanet = tstart;
                 argmin = mountainColor.rgb;
 
@@ -372,10 +373,10 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
-        vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + 10.);
+        vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + sunRadius);
         if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
         {
-            vec2 sun = raySphere(r0, rd, sunPos, 10.0);
+            vec2 sun = raySphere(r0, rd, sunPos, sunRadius);
             if(sun.y > sun.x && sun.x < tMin && sun.y >= 0.)
             {
                 tMin = sun.x;
@@ -383,24 +384,24 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
             else
             {
-                float md = (1.0 / 10.) * raySphereMinDist(r0, rd, sunPos, 10.).x + 1.;
+                float md = (1. / sunRadius) * raySphereMinDist(r0, rd, sunPos, sunRadius).x + 1.;
                 float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
                 argmin = light * sunColor + (1.0 - light) * argmin;
             }
         }
 
-        vec2 tAtmos = raySphere(r0, rd, planetPos, planetRadius + atmosRadius);
+        vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
         float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
         if(dstThroughAtmosphere > 0.)
         {
-            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, planetRadius, sunPos, argmin);
+            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, uPlanetRadius, sunPos, argmin);
         }
 
         mapColor += argmin * reflectionCoef;
 
         if(!shouldStop)
         {
-            float dstToWater = raySphere(r0, rd, planetPos, planetRadius + seaLevel * mountainAmplitude).x;
+            float dstToWater = raySphere(r0, rd, planetPos, uPlanetRadius + seaLevel * mountainAmplitude).x;
             r0 = r0 + dstToWater * rd;
             rd = reflect(rd, waveNormal(normalize(r0 - planetPos)));
             reflectionCoef = nextReflectionCoef;
@@ -416,8 +417,6 @@ void main()
     uv.x *= aspectRatio;
 
     vec3 rayDir = vec3(uv.x, uv.y, 2. / tan(0.5 * fov));
-    rayDir.yz *= rot2D(-cameraRotation.y);
-    rayDir.xz *= rot2D(cameraRotation.x);
 
     float distToScreen = length(vec3(uv.x, uv.y, 2. / tan(0.5 * fov)));
     vec3 totalLight = raytraceMap(rayDir, cameraPos + distToScreen * rayDir);
