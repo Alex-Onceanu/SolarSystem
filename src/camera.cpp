@@ -16,10 +16,6 @@ vec2 mousePos;
 Camera::Camera(GLFWwindow* __window, vec3 spawn, vec3 firstPlanet)
     : window(__window), pos(spawn)
 {
-    up = (spawn - firstPlanet).normalize();
-    left = (left - up * up.dot(left)).normalize();
-    front = left.cross(up);
-
     glfwSetKeyCallback(window, glfwKeyCallback);
     glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
     glfwSetCharCallback(window, glfwCharCallback);
@@ -98,14 +94,55 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
         glfwSetCursorPos(window, 0., 0.);
     }
 
-    // find closest planet
     PlanetData closest = { .p = vec3(INFINITY, INFINITY, INFINITY), .radius = 1., .mass = 1. };
     for(auto e : planets)
     {
         if((e.p - pos).length() < (closest.p - pos).length()) 
             closest = e;
     }
+#if 1
+    vec3 speed = vec3(0.0, 0.0, 0.0);
 
+    // this code is right-handed, but OpenGl's NDC are left-handed for some reason
+    if(isKeyPressed[0]) speed.z -= 1.0;
+    if(isKeyPressed[2]) speed.z += 1.0;
+
+    if(isKeyPressed[1]) speed.x -= 1.0;
+    if(isKeyPressed[3]) speed.x += 1.0;
+    if(isKeyPressed[5]) speed.y += 1.0;
+    if(isKeyPressed[6]) speed.y -= 1.0;
+
+    speed.normalized();
+    speed *= speedRef;
+
+    normal = (pos - closest.p).normalize();
+    // std::cout << normal << std::endl;
+    frontRef = (frontRef - normal * frontRef.dot(normal)).normalize();
+    leftRef = normal.cross(frontRef);
+
+    // relative to when the normal is (0, 1, 0)
+    vec3 front = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
+    vec3 left = vec3(cosf(theta.x), 0., sinf(theta.x)) * -1.;
+    vec3 up = front.cross(left);
+
+    // change of basis
+    front = vec3(front.dot(vec3(-leftRef.x, normal.x, frontRef.x)), front.dot(vec3(-leftRef.y, normal.y, frontRef.y)), front.dot(vec3(-leftRef.z, normal.z, frontRef.z)));
+    left  = vec3( left.dot(vec3(-leftRef.x, normal.x, frontRef.x)),  left.dot(vec3(-leftRef.y, normal.y, frontRef.y)),  left.dot(vec3(-leftRef.z, normal.z, frontRef.z)));
+    up    = vec3(   up.dot(vec3(-leftRef.x, normal.x, frontRef.x)),    up.dot(vec3(-leftRef.y, normal.y, frontRef.y)),    up.dot(vec3(-leftRef.z, normal.z, frontRef.z)));
+
+    theta.x -= mousePos.x * (0.02f * PI * dt);
+    theta.y -= mousePos.y * (0.02f * PI * dt);
+    theta.y = std::max(-PI / 2.0f + 0.0001f, std::min(theta.y, PI / 2.0f - 0.0001f));
+    mousePos = vec2(0.0, 0.0);
+
+    // std::cout << "front : " << direction << "\nright : " << right << "\nup : " << up << std::endl;
+    float dstToCtr = (closest.p - pos).length();
+    std::cout << frontRef << std::endl;
+    pos -= left * speed.x * dt;
+    pos += front * speed.z * dt;
+    pos = (pos - closest.p).normalize() * dstToCtr + closest.p;
+    pos += up * speed.y * dt;
+#else
     float dstToCtr = (closest.p - pos).length();
 
     // std::cout << (closest.p - pos).length() << std::endl;
@@ -163,4 +200,5 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
     viewUp = up;
 
     pos += speed * dt;
+#endif
 }

@@ -5,10 +5,10 @@ layout(location = 0) out vec4 outColor;
 
 uniform float time;
 uniform float fov;
-uniform mat3 view;
 
 uniform vec3 cameraPos;
 uniform vec2 cameraRotation;
+uniform mat3 planetBasis;
 
 uniform vec3 sunPos;
 uniform float sunRadius;
@@ -430,7 +430,10 @@ void main()
     vec2 uv = vFragPos;
     uv.x *= aspectRatio;
 
-    vec3 rayDir = vec3(uv.x, uv.y, 2. / tan(0.5 * fov)) * inverse(view);
+    vec3 rayDir = vec3(uv.x, uv.y, 2. / tan(0.5 * fov));
+    rayDir.yz *= rot2D(-cameraRotation.y);
+    rayDir.xz *= rot2D(cameraRotation.x);
+    rayDir = planetBasis * rayDir;
 
     float distToScreen = length(vec3(uv.x, uv.y, 2. / tan(0.5 * fov)));
     vec3 totalLight = raytraceMap(rayDir, cameraPos + distToScreen * rayDir);

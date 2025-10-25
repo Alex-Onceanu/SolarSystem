@@ -22,10 +22,10 @@ public:
 
     vec3 getPos() { return pos; }
     vec2 getAngle() { return theta; }
-    void getView(float* v) { if(!v) return; 
-        v[0] =viewLeft.x;  v[3] =viewLeft.y;  v[6] =viewLeft.z; 
-        v[1] = viewUp.x;    v[4] = viewUp.y;    v[7] = viewUp.z; 
-        v[2] =lookat.x;    v[5] = lookat.y;   v[8] =lookat.z; }
+    void getPlanetBasis(float v[9]) { if(!v) return; 
+        v[0] =-leftRef.x;    v[3] = normal.x;   v[6] = frontRef.x; 
+        v[1] =-leftRef.y;    v[4] = normal.y;   v[7] = frontRef.y; 
+        v[2] =-leftRef.z;    v[5] = normal.z;   v[8] = frontRef.z; }
     void setSpeedRef(const float& v) { speedRef = v; }
     
     static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -41,8 +41,8 @@ private:
     vec3 speed{};
     float speedRef{};
 
-    vec3 front = vec3(0., 0., 1.), left = vec3(-1., 0., 0.), up = vec3(0., 1., 0.);
-    vec3 lookat = front, viewLeft = left, viewUp = up;
+    vec3 normal = vec3(0., 1., 0.), frontRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
+    
 
     vec2 theta{};
 };
