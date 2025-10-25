@@ -129,7 +129,7 @@ float fbm(vec3 x)
 
 void generateSphericalFBMnoise()
 {
-    constexpr size_t RESOLUTION = 1024;
+    constexpr size_t RESOLUTION = 2048;
     char img[RESOLUTION * RESOLUTION];
 
     float maxfound = 0.;
@@ -148,6 +148,7 @@ void generateSphericalFBMnoise()
 
             img[i * RESOLUTION + j] = static_cast<char>(CLAMP((x - minfound) / (maxfound - minfound), 0.f, 1.f) * 255.);
         }
+        std::cout << i << std::endl;
     }
 
     std::cout << "min : " << minfound << ", max : " << maxfound << std::endl;
@@ -161,6 +162,6 @@ void generateSphericalFBMnoise()
 int main()
 {
     srand(time(NULL));
-    generateOpticalDepthTexture();
+    generateSphericalFBMnoise();
     return 0;
 }

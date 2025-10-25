@@ -19,7 +19,7 @@ int main()
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init(window);
-    auto camera = std::make_unique<Camera>(window, vec3(0., 80.0, 300.0), vec3(0.,-380.,300.));
+    auto camera = std::make_unique<Camera>(window, vec3(0., 120.0, 300.0), vec3(0.,-380.,300.));
 
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;

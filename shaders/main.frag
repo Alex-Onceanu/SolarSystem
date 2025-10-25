@@ -268,7 +268,7 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
 
-    vec2 eps = vec2(0.02, 0.);
+    vec2 eps = vec2(0.04, 0.);
 
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
     vec3 sample1 = mtn.xyz + planetBasis * eps.xyy;
@@ -386,7 +386,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         }
 
 
-        if(tMin <= 1e5)
+        if(tMin >= 1e5 - 0.1)
         {
             vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
             float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);

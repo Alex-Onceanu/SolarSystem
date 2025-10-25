@@ -41,11 +41,11 @@ InputData Input::getInput()
 
     static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
                             .planetPos{ 0.,-380.,300. }, .planetRadius = 400., .planetMass = 1800000.,
-                            .fov = 60., .cameraSpeed = 60.,
+                            .fov = 60., .cameraSpeed = 80.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 100., .atmosFalloff = 5.4, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 30., 
-                            .seaLevel = .6, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
+                            .mountainFrequency = 8., .mountainAmplitude = 60., 
+                            .seaLevel = .45, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
                             .ambientCoef = 0.04, .diffuseCoef = 0.85, .minDiffuse = 0.22, .penumbraCoef = 0.07,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 1073. };
 
