@@ -42,8 +42,6 @@ private:
     float speedRef{};
 
     vec3 normal = vec3(0., 1., 0.), frontRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
-    
-
     vec2 theta{};
 };
 

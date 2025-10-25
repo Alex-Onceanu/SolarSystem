@@ -39,11 +39,11 @@ InputData Input::getInput()
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
-    static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 1600.0,
+    static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
                             .planetPos{ 0.,-380.,300. }, .planetRadius = 400., .planetMass = 1800000.,
                             .fov = 60., .cameraSpeed = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
-                            .atmosRadius = 36., .atmosFalloff = 6.4, .atmosScattering = 1.4, .atmosColor{700., 530., 440.},
+                            .atmosRadius = 100., .atmosFalloff = 5.4, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
                             .mountainFrequency = 8., .mountainAmplitude = 30., 
                             .seaLevel = .6, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
                             .ambientCoef = 0.04, .diffuseCoef = 0.85, .minDiffuse = 0.22, .penumbraCoef = 0.07,
@@ -95,7 +95,7 @@ InputData Input::getInput()
         ImGui::SliderFloat("atmos steps i", &data.nb_steps_i, 0., 30.);
         ImGui::SliderFloat("atmos steps j", &data.nb_steps_j, 0., 30.);
         ImGui::SliderFloat("atmos radius", &data.atmosRadius, 0., 5000.0);
-        ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 0.0001, 40.0);
+        ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 0.0001, 200.0);
         ImGui::SliderFloat("atmos scattering", &data.atmosScattering, 0., 10.);
         ImGui::SliderFloat3("atmos lambda (nm)", data.atmosColor, 400., 800.);
     }

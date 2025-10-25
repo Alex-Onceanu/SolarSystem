@@ -141,6 +141,7 @@ vec3 background(vec3 d)
     float rand3 = rand(rand2);
     vec3 randVector = vec3(rand1, rand2, rand3);
     
+    // cool mario galaxy background color : vec3(0.035, 0.114, 0.392)
     if(rand1 < starVoidThreshold) return vec3(0.); // so we have some void
 
     // second call to inverseSF because we needed to get the seed first
@@ -160,9 +161,9 @@ vec3 background(vec3 d)
 
 vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater)
 {
-    float nb_iterations = underwater ? 40. : 500.;
+    float nb_iterations = underwater ? 60. : 400.;
     float maxt = tPlanety;
-    float dt = max(0.045, maxt / nb_iterations);
+    float dt = max(0.04, maxt / nb_iterations);
     float lh = 0.0;
     float ly = 0.0;
 
@@ -187,7 +188,7 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
 // sum of 3 propagative waves based on angle and time
 float waveHeight(vec3 gwhere)
 {
-    float waveAmp = 0.14;
+    float waveAmp = 0.05;
     float k0 = dot(gwhere, normalize(vec3(1.1, 0.8, 1.1)));
     float k1 = dot(gwhere, normalize(vec3(-1., 1.2, 0.9)));
     float k2 = dot(gwhere, normalize(vec3(-0.8, -0.3, -0.5)));
@@ -217,23 +218,21 @@ mat3 changeOfBasis(vec3 target, vec3 up)
 // derivative of waveHeight
 vec3 waveNormal(vec3 gwhere)
 {
-    // mat3 R = changeOfBasis(gwhere, vec3(0., 1., 0.));
     vec2 eps = vec2(0.005, 0.);
 
-    vec3 sample1 = normalize(gwhere + eps.xyy);
+    vec3 sample1 = normalize(gwhere + planetBasis* eps.xyy);
     float h1 = waveHeight(sample1);
-    vec3 sample1b = normalize(gwhere - eps.xyy);
+    vec3 sample1b = normalize(gwhere - planetBasis * eps.xyy);
     float h1b = waveHeight(sample1b);
     float gradx = (h1 - h1b) / (2. * eps.x);
 
-    vec3 sample2 = normalize(gwhere + eps.yyx);
+    vec3 sample2 = normalize(gwhere + planetBasis * eps.yyx);
     float h2 = waveHeight(sample2);
-    vec3 sample2b = normalize(gwhere - eps.yyx);
+    vec3 sample2b = normalize(gwhere - planetBasis * eps.yyx);
     float h2b = waveHeight(sample2b);
     float gradz = (h2 - h2b) / (2. * eps.x);
 
-    // TODO : this only works when the normal is aligned with (Oy), needs to be rotated
-    return normalize(gwhere + vec3(-gradx, 1., -gradz));
+    return planetBasis * normalize(vec3(-gradx, 1., -gradz));
 }
 
 // .w of return value is positive if there is a reflection
@@ -254,7 +253,7 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     if(n <= seaLevel + 0.0001) // water
     {
         clr = waterColor.rgb;
-        vec3 wn = waveNormal(sphereNormal);
+        vec3 wn = normalize(waveNormal(sphereNormal));
 
         vec3 refracted = refract(normalize(rayDir), wn, refractionindex);
         vec2 dstToSeabed = raySphere(mtn.xyz, refracted, spherePos, radius);
@@ -269,24 +268,23 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
 
-    mat3 R = changeOfBasis(sphereNormal, vec3(0., 1., 0.));
     vec2 eps = vec2(0.02, 0.);
 
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
-    vec3 sample1 = mtn.xyz + eps.xyy * R;
+    vec3 sample1 = mtn.xyz + planetBasis * eps.xyy;
     float h1 = noise(normalize(sample1 - spherePos), n <= seaLevel + 0.0001);
-    vec3 sample1b = mtn.xyz - eps.xyy * R;
+    vec3 sample1b = mtn.xyz - planetBasis * eps.xyy;
     float h1b = noise(normalize(sample1b - spherePos), n <= seaLevel + 0.0001);
     float gradx = (h1 - h1b) / (2. * eps.x);
 
-    vec3 sample2 = mtn.xyz + eps.yyx * R;
+    vec3 sample2 = mtn.xyz + planetBasis * eps.yyx;
     float h2 = noise(normalize(sample2 - spherePos), n <= seaLevel + 0.0001);
-    vec3 sample2b = mtn.xyz - eps.yyx * R;
+    vec3 sample2b = mtn.xyz - planetBasis * eps.yyx;
     float h2b = noise(normalize(sample2b - spherePos), n <= seaLevel + 0.0001);
     float gradz = (h2 - h2b) / (2. * eps.x);
 
-    // TODO : this only works when the normal is aligned with (Oy), needs to be rotated
-    vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz)) * R;
+    // this only works when the normal is aligned with (Oy), so it needs to be rotated
+    vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
 
     // TODO : no grass grows on slope
     // float grassOnSlope = 0.5;
@@ -349,7 +347,7 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
         totalLight += localDensity * transmittance * atmosColor * idt;
     }
 
-    return totalLight + exp(-toEyeOpticalDepth) * originalColor;
+    return totalLight + originalColor * exp(-toEyeOpticalDepth);
 }
 
 // _____________________________________________________ MAIN ________________________________________________________
@@ -387,6 +385,17 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
+
+        if(tMin <= 1e5)
+        {
+            vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
+            float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
+            if(dstThroughAtmosphere > 0.)
+            {
+                argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, uPlanetRadius, sunPos, argmin);
+            }
+        }
+
         vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + sunRadius);
         if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
         {
@@ -402,13 +411,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                 float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
                 argmin = light * sunColor + (1.0 - light) * argmin;
             }
-        }
-
-        vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
-        float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
-        if(dstThroughAtmosphere > 0.)
-        {
-            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, uPlanetRadius, sunPos, argmin);
         }
 
         mapColor += argmin * reflectionCoef;

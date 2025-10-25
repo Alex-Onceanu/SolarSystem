@@ -103,7 +103,6 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
 #if 1
     vec3 speed = vec3(0.0, 0.0, 0.0);
 
-    // this code is right-handed, but OpenGl's NDC are left-handed for some reason
     if(isKeyPressed[0]) speed.z -= 1.0;
     if(isKeyPressed[2]) speed.z += 1.0;
 
@@ -116,7 +115,6 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
     speed *= speedRef;
 
     normal = (pos - closest.p).normalize();
-    // std::cout << normal << std::endl;
     frontRef = (frontRef - normal * frontRef.dot(normal)).normalize();
     leftRef = normal.cross(frontRef);
 
@@ -135,12 +133,10 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
     theta.y = std::max(-PI / 2.0f + 0.0001f, std::min(theta.y, PI / 2.0f - 0.0001f));
     mousePos = vec2(0.0, 0.0);
 
-    // std::cout << "front : " << direction << "\nright : " << right << "\nup : " << up << std::endl;
     float dstToCtr = (closest.p - pos).length();
-    std::cout << frontRef << std::endl;
-    pos -= left * speed.x * dt;
-    pos += front * speed.z * dt;
-    pos = (pos - closest.p).normalize() * dstToCtr + closest.p;
+    pos -= (left - normal * normal.dot(left)).normalize() * speed.x * dt;
+    pos += (front - normal * normal.dot(front)).normalize() * speed.z * dt;
+    pos = (pos - closest.p).normalize() * dstToCtr + closest.p; // TODO : if the player is on the ground, follow the heightmap
     pos += up * speed.y * dt;
 #else
     float dstToCtr = (closest.p - pos).length();
