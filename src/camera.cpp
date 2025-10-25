@@ -17,8 +17,8 @@ Camera::Camera(GLFWwindow* __window, vec3 spawn, vec3 firstPlanet)
     : window(__window), pos(spawn)
 {
     up = (spawn - firstPlanet).normalize();
-    right = (right - up * up.dot(right)).normalize();
-    front = up.cross(right);
+    left = (left - up * up.dot(left)).normalize();
+    front = left.cross(up);
 
     glfwSetKeyCallback(window, glfwKeyCallback);
     glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
@@ -122,12 +122,10 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
 
     vec3 tmpSpeed(0., 0., 0.);
 
-    // this code is right-handed, but OpenGl's NDC are left-handed for some reason
     if(isKeyPressed[0]) tmpSpeed.z += 1.0;
     if(isKeyPressed[2]) tmpSpeed.z -= 1.0;
-
-    if(isKeyPressed[1]) tmpSpeed.x -= 1.0;
-    if(isKeyPressed[3]) tmpSpeed.x += 1.0;
+    if(isKeyPressed[1]) tmpSpeed.x += 1.0;
+    if(isKeyPressed[3]) tmpSpeed.x -= 1.0;
     if(isKeyPressed[5]) tmpSpeed.y += 1.0;
     if(isKeyPressed[6]) tmpSpeed.y -= 1.0;
 
@@ -137,33 +135,32 @@ void Camera::update(float dt, std::vector<PlanetData> planets)
     // if(tmpSpeed.length() > 0.01) speed = vec3(0., 0., 0.);
 
     // vec3 direction = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
-    // vec3 right = vec3(cosf(theta.x), 0., sinf(theta.x));
-    // vec3 up = right.cross(direction);
+    // vec3 left = vec3(cosf(theta.x), 0., sinf(theta.x));
+    // vec3 up = left.cross(direction);
 
-    theta.x -= mousePos.x * (0.02f * PI * dt);
-    theta.y -= mousePos.y * (0.02f * PI * dt);
-    theta.y = std::max(-PI / 2.0f + 0.0001f, std::min(theta.y, PI / 2.0f - 0.0001f));
+    vec2 dtheta(mousePos.x * (0.02f * PI * dt), mousePos.y * (0.02f * PI * dt));
+    // theta.y = std::max(-PI / 2.0f + 0.0001f, std::min(theta.y, PI / 2.0f - 0.0001f));
     mousePos = vec2(0.0, 0.0);
 
-    // rotate camera basis (only front and right) based on planet size
-    float ftsx = fabsf(tmpSpeed.x), ftsz = fabsf(tmpSpeed.z);
-    if(ftsz >= 0.0001)
+    // rotate camera basis (only front and left) based on planet size
+    if(fabsf(tmpSpeed.z) >= 0.0001)
     {
-        pos = (pos - closest.p).rotate(right * (dt * ftsz / dstToCtr), tmpSpeed.z < 0.) + closest.p;
+        pos = (pos - closest.p).rotate(left, dt * tmpSpeed.z / dstToCtr) + closest.p;
         up = (pos - closest.p).normalize();
-        front = front.rotate(right * (dt * ftsz / dstToCtr), tmpSpeed.z < 0.);
+        front = front.rotate(left, dt * tmpSpeed.z / dstToCtr);
     }
-    if(ftsx >= 0.0001)
+    if(fabsf(tmpSpeed.x) >= 0.0001)
     {
-        pos = (pos - closest.p).rotate(front * (dt * ftsx / dstToCtr), tmpSpeed.x >= 0.) + closest.p;
+        pos = (pos - closest.p).rotate(front, dt * tmpSpeed.x / dstToCtr) + closest.p;
         up = (pos - closest.p).normalize();
-        right = right.rotate(front * (dt * ftsx / dstToCtr), tmpSpeed.x >= 0.);
+        left = left.rotate(front, dt * tmpSpeed.x / dstToCtr);
     }
 
-    std::cout << dstToCtr << std::endl;
+    std::cout << (closest.p - pos).length() << std::endl;
 
-    // std::cout << "front : " << direction << "\nright : " << right << "\nup : " << up << std::endl;
-    // speed = (right * tmpSpeed.x + up * tmpSpeed.y + front * tmpSpeed.z);
+    lookat = front * -1.;
+    viewLeft = left;
+    viewUp = up;
 
     pos += speed * dt;
 }

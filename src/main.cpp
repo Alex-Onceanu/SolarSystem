@@ -19,7 +19,7 @@ int main()
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init(window);
-    auto camera = std::make_unique<Camera>(window, vec3(0.0, -280.0, -160.0), vec3(0.,-280.,200.));
+    auto camera = std::make_unique<Camera>(window, vec3(0., 40.0, -50.0), vec3(0.,-280.,200.));
 
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;
@@ -114,7 +114,7 @@ int main()
 
         float view[9];
         camera->getView(view);
-        glUniformMatrix3fv(glGetUniformLocation(program ,"view"), 9, false, view);
+        glUniformMatrix3fv(glGetUniformLocation(program ,"view"), 1, false, view);
 
         int W, H;
         glfwGetWindowSize(window, &W, &H);

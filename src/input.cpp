@@ -40,7 +40,7 @@ InputData Input::getInput()
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
     static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 1600.0,
-                            .planetPos{ 0.,-280.,200. }, .planetRadius = 300., .planetMass = 1800000.,
+                            .planetPos{ 0.,-380.,300. }, .planetRadius = 400., .planetMass = 1800000.,
                             .fov = 60., .cameraSpeed = 60.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 36., .atmosFalloff = 6.4, .atmosScattering = 1.4, .atmosColor{700., 530., 440.},

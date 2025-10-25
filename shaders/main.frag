@@ -202,9 +202,22 @@ float waveHeight(vec3 gwhere)
                     + A3 * (1. + cos(45. * k3 + 6.0 * time))); 
 }
 
+mat3 changeOfBasis(vec3 target, vec3 up)
+{
+    vec3 ntarget = normalize(target);
+    if(abs(ntarget.y) > 0.999)
+        return mat3(1., 0., 0., 0., 1., 0., 0., 0., 1.);
+    float lbd = 1. / sqrt(1. - ntarget.y);
+    vec3 abc = normalize((up - ntarget * ntarget.y) * lbd);
+    vec3 cr = cross(abc, ntarget);
+
+    return mat3(abc, ntarget, cr);
+}
+
 // derivative of waveHeight
 vec3 waveNormal(vec3 gwhere)
 {
+    // mat3 R = changeOfBasis(gwhere, vec3(0., 1., 0.));
     vec2 eps = vec2(0.005, 0.);
 
     vec3 sample1 = normalize(gwhere + eps.xyy);
@@ -256,23 +269,24 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
 
+    mat3 R = changeOfBasis(sphereNormal, vec3(0., 1., 0.));
     vec2 eps = vec2(0.02, 0.);
 
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
-    vec3 sample1 = mtn.xyz + eps.xyy;
+    vec3 sample1 = mtn.xyz + eps.xyy * R;
     float h1 = noise(normalize(sample1 - spherePos), n <= seaLevel + 0.0001);
-    vec3 sample1b = mtn.xyz - eps.xyy;
+    vec3 sample1b = mtn.xyz - eps.xyy * R;
     float h1b = noise(normalize(sample1b - spherePos), n <= seaLevel + 0.0001);
     float gradx = (h1 - h1b) / (2. * eps.x);
 
-    vec3 sample2 = mtn.xyz + eps.yyx;
+    vec3 sample2 = mtn.xyz + eps.yyx * R;
     float h2 = noise(normalize(sample2 - spherePos), n <= seaLevel + 0.0001);
-    vec3 sample2b = mtn.xyz - eps.yyx;
+    vec3 sample2b = mtn.xyz - eps.yyx * R;
     float h2b = noise(normalize(sample2b - spherePos), n <= seaLevel + 0.0001);
     float gradz = (h2 - h2b) / (2. * eps.x);
 
     // TODO : this only works when the normal is aligned with (Oy), needs to be rotated
-    vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
+    vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz)) * R;
 
     // TODO : no grass grows on slope
     // float grassOnSlope = 0.5;
@@ -416,7 +430,7 @@ void main()
     vec2 uv = vFragPos;
     uv.x *= aspectRatio;
 
-    vec3 rayDir = vec3(uv.x, uv.y, 2. / tan(0.5 * fov));
+    vec3 rayDir = vec3(uv.x, uv.y, 2. / tan(0.5 * fov)) * inverse(view);
 
     float distToScreen = length(vec3(uv.x, uv.y, 2. / tan(0.5 * fov)));
     vec3 totalLight = raytraceMap(rayDir, cameraPos + distToScreen * rayDir);
