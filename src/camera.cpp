@@ -227,7 +227,7 @@ float Camera::noise(const vec3& uvw) const
 
 float Camera::heightHere(const PlanetData& pl) const
 {
-    const float playerHeight = 80.;
+    const float playerHeight = 65.;
 
     float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
 

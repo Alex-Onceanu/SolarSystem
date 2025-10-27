@@ -129,7 +129,7 @@ float fbm(vec3 x)
 
 void generateSphericalFBMnoise()
 {
-    constexpr size_t RESOLUTION = 4096;
+    constexpr size_t RESOLUTION = 4096 * 4;
     char* img = new char[RESOLUTION * RESOLUTION];
 
     float maxfound = 0.;
@@ -159,6 +159,94 @@ void generateSphericalFBMnoise()
     out.write(img, RESOLUTION * RESOLUTION);
     delete[] img;
 }
+
+// returns 3D value noise and its 3 derivatives
+// vec4 noised(vec3 x)
+// {
+//     vec3 p = vec3::floor(x);
+//     vec3 w = vec3::fract(x);
+
+//     vec3 u = w*w*w*(w*(w*6.0-15.0)+10.0);
+//     vec3 du = 30.0*w*w*(w*(w-1.0)+2.0);
+
+//     float a = myRandomMagic( p+vec3(0,0,0) );
+//     float b = myRandomMagic( p+vec3(1,0,0) );
+//     float c = myRandomMagic( p+vec3(0,1,0) );
+//     float d = myRandomMagic( p+vec3(1,1,0) );
+//     float e = myRandomMagic( p+vec3(0,0,1) );
+//     float f = myRandomMagic( p+vec3(1,0,1) );
+//     float g = myRandomMagic( p+vec3(0,1,1) );
+//     float h = myRandomMagic( p+vec3(1,1,1) );
+
+//     float k0 =   a;
+//     float k1 =   b - a;
+//     float k2 =   c - a;
+//     float k3 =   e - a;
+//     float k4 =   a - b - c + d;
+//     float k5 =   a - c - e + g;
+//     float k6 =   a - b - e + f;
+//     float k7 = - a + b + c - d + e - f - g + h;
+
+//     return vec4( -1.0+2.0*(k0 + k1*u.x + k2*u.y + k3*u.z + k4*u.x*u.y + k5*u.y*u.z + k6*u.z*u.x + k7*u.x*u.y*u.z),
+//                  2.0*du *vec3( k1 + k4*u.y + k6*u.z + k7*u.y*u.z,
+//                                k2 + k5*u.z + k4*u.x + k7*u.z*u.x,
+//                                k3 + k6*u.x + k5*u.y + k7*u.x*u.y ) );
+// }
+
+// // returns 3D fbm and its 3 derivatives
+// vec4 fbmNormal(vec3 x)
+// {
+//     float f = 1.98;  // could be 2.0
+//     float s = 0.49;  // could be 0.5
+//     float a = 0.0;
+//     float b = 0.5;
+//     int numOctaves = 6;
+//     vec3  d = vec3(0.0,0.0,0.0);
+//     mat3  m = mat3(1.0,0.0,0.0,
+//                    0.0,1.0,0.0,
+//                    0.0,0.0,1.0);
+//     for( int i=0; i<numOctaves; i++ )
+//     {
+//         vec4 n = noised(x);
+//         a += b*n.x;          // accumulate values
+//         d += b*m*n.yzw;      // accumulate derivatives
+//         b *= s;
+//         x = f*m3*x;
+//         m = f*m3i*m;
+//     }
+//     return vec4(a, d.x, d.y, d.z);
+// }
+
+// void generateSphericalFBMnormalMap()
+// {
+//     constexpr size_t RESOLUTION = 4096;
+//     char* img = new char[RESOLUTION * RESOLUTION];
+
+//     float maxfound = 0.;
+//     float minfound = INFINITY;
+
+//     for(int i = 0; i < RESOLUTION; i++)
+//     {
+//         for(int j = 0; j < RESOLUTION; j++)
+//         {
+//             vec2 uv(static_cast<float>(j) / static_cast<float>(RESOLUTION), static_cast<float>(i) / static_cast<float>(RESOLUTION));
+//             vec3 d(cosf(M_PI * (0.5 - uv.y)) * cosf(2. * M_PI * (uv.x - 0.5)), sinf(M_PI * (0.5 - uv.y)), cosf(M_PI * (0.5 - uv.y)) * sinf(2. * M_PI * (uv.x - 0.5)));
+//             d.normalized();
+//             vec3 n = fbmNormal(d);
+
+//             img[3 * (i * RESOLUTION + j)] = static_cast<char>(0.5 * (n.x + 1.) * 255.f);
+//             img[3 * (i * RESOLUTION + j + 1)] = static_cast<char>(0.5 * (n.y + 1.) * 255.f);
+//             img[3 * (i * RESOLUTION + j + 2)] = static_cast<char>(0.5 * (n.z + 1.) * 255.f);
+//         }
+//         std::cout << i << std::endl;
+//     }
+
+//     std::ofstream out("output.ppm");
+//     std::string sres = std::to_string(RESOLUTION);
+//     out << "P6\n" << sres << " " << sres << "\n" << "255\n";
+//     out.write(img, RESOLUTION * RESOLUTION);
+//     delete[] img;
+// }
 
 int main()
 {

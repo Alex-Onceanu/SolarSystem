@@ -163,7 +163,7 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
 {
     float nb_iterations = underwater ? 60. : 400.;
     float maxt = tPlanety;
-    float dt = max(0.04, maxt / nb_iterations);
+    float dt = max(0.025, maxt / nb_iterations);
     float lh = 0.0;
     float ly = 0.0;
 
@@ -269,7 +269,7 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
 
-    vec2 eps = vec2(0.05, 0.);
+    vec2 eps = vec2(0.06, 0.);
 
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
     vec3 sample1 = mtn.xyz + planetBasis * eps.xyy;
@@ -289,12 +289,12 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     vec3 localNormal = normalize(sphereNormal - mountainAmplitude * gradx * normalize(sample1 - sample1b) - mountainAmplitude * gradz * normalize(sample2 - sample2b));
 
     // no grass grows on slope
-    clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.6, abs(dot(localNormal, sphereNormal))));
+    // clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.6, abs(dot(localNormal, sphereNormal))));
 
-    float diffuse = max(minDiffuse, dot(localNormal, normalize(lightSource - mtn.xyz)));
+    float diffuse = max(-1., dot(localNormal, normalize(lightSource - mtn.xyz)));
     float penumbra = smoothstep(0.1, 0.6, n); // trick for faking global illumination
 
-    float light = diffuseCoef * diffuse * sphereDiffuse + penumbraCoef * penumbra;
+    float light = max(0., diffuseCoef * diffuse + sphereDiffuse + penumbraCoef * penumbra);
     vec3 shaded = light * clr + ambientCoef * normalize(vec3(1.) + atmosColor);
 
     return vec4((shouldReflect < -0.1 ? 1. : (1. - shouldReflect)) * shaded, shouldReflect);
@@ -345,7 +345,8 @@ vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radiu
         totalLight += localDensity * transmittance * atmosColor * idt;
     }
 
-    return totalLight + originalColor * exp(-toEyeOpticalDepth);
+    float starFade = 3.5 * length(totalLight);
+    return totalLight + originalColor * mix(1., exp(-toEyeOpticalDepth), min(1., starFade));
 }
 
 // _____________________________________________________ MAIN ________________________________________________________
@@ -438,5 +439,6 @@ void main()
     float distToScreen = length(vec3(uv.x, uv.y, 2. / tan(0.5 * fov)));
     vec3 totalLight = raytraceMap(rayDir, cameraPos + distToScreen * rayDir);
 
-    outColor = vec4(totalLight, 1.0);
+    float edge = length(dFdy(totalLight));
+    outColor = vec4(totalLight + 0.55 * edge, 1.0);
 }

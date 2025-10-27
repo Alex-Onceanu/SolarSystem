@@ -40,13 +40,13 @@ InputData Input::getInput()
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
     static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
-                            .planetPos{ 0.,-1080.,300. }, .planetRadius = 1000., .planetMass = 2500000000.,
-                            .fov = 60., .cameraSpeed = 300., .jumpStrength = 430.,
-                            .nb_steps_i = 8.1, .nb_steps_j = 4.1,
-                            .atmosRadius = 100., .atmosFalloff = 5.4, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 120., 
-                            .seaLevel = .45, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
-                            .ambientCoef = 0.04, .diffuseCoef = 0.85, .minDiffuse = 0.22, .penumbraCoef = 0.07,
+                            .planetPos{ 0.,-580.,300. }, .planetRadius = 500., .planetMass = 700000000.,
+                            .fov = 60., .cameraSpeed = 230., .jumpStrength = 400.,
+                            .nb_steps_i = 9.01, .nb_steps_j = 6.01,
+                            .atmosRadius = 204., .atmosFalloff = 6.0, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
+                            .mountainFrequency = 8., .mountainAmplitude = 80., 
+                            .seaLevel = .45, .waterColor{ 82. / 255.,147. / 255.,200. / 255.,0.13 }, .refractionindex = 0.75, .fresnel = 2.,
+                            .ambientCoef = 0.02, .diffuseCoef = 0.21, .minDiffuse = 0.36, .penumbraCoef = 0.06,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 1073. };
 
     auto io = ImGui::GetIO();
