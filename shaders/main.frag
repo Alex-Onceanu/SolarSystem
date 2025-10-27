@@ -25,7 +25,7 @@ uniform float minDiffuse;
 uniform float penumbraCoef;
 
 uniform sampler2D earthTexture;
-uniform sampler2D opticalDepthTexture;
+uniform sampler2D opticalDepthTexture; // TODO : say my name
 
 uniform float NB_STEPS_i;
 uniform float NB_STEPS_j;
@@ -264,6 +264,7 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
 
         shouldReflect = 1. - pow(refrCoef, fresnel);
     }
+    // TODO : smooth palette instead of step
     else if(n < seaLevel + 0.1) clr = vec3(216., 197., 150.) / 255.;
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
@@ -323,7 +324,6 @@ float opticalDepth(vec3 rayDir, vec3 rayPos, float rayLength, float nb_steps, ve
 
     return opticalDepth;
 }
-
 
 vec3 atmosphere(vec3 rayDir, vec3 start, float dist, vec3 planetPos, float radius, vec3 lightSource, vec3 originalColor)
 {

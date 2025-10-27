@@ -17,8 +17,9 @@ struct PlanetData
 class Camera
 {
 public:
-    Camera(GLFWwindow* __window, vec3 spawn, vec3 firstPlanet);
-    void update(float dt, std::vector<PlanetData> planets);
+    Camera(GLFWwindow* __window, vec3 spawn);
+    ~Camera() { free(mountainTexture); }
+    void update(float& dt, const std::vector<PlanetData>& planets);
 
     vec3 getPos() { return pos; }
     vec2 getAngle() { return theta; }
@@ -26,20 +27,40 @@ public:
         v[0] =-leftRef.x;    v[3] = normal.x;   v[6] = frontRef.x; 
         v[1] =-leftRef.y;    v[4] = normal.y;   v[7] = frontRef.y; 
         v[2] =-leftRef.z;    v[5] = normal.z;   v[8] = frontRef.z; }
-    void setSpeedRef(const float& v) { speedRef = v; }
     
+    void setSpeedRef(const float& v) { speedRef = v; }
+    void setJumpStrength(const float& v) { jumpStrength = v; }
+    void setMountainParams(const float& mountainAmp, const float& sea) { mountainAmplitude = mountainAmp; seaLevel = sea; }
+    void setMountainTexture(unsigned char* tex, vec2 size) { mountainTexture = tex; mountainTextureSize = size; }
+
     static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void glfwCharCallback(GLFWwindow* window, unsigned int c);
 
+private:
+    void walk(const float dt, const PlanetData& closest);
+    void jump(const float dt);
+    void updateMouse(const float dt);
+    PlanetData findClosest(const std::vector<PlanetData>& planets);
+    void applyGravity(const float& dt, const std::vector<PlanetData>& planets);
+    void updatePlanetBasis(const PlanetData& closest);
+    float heightHere(const PlanetData& pl) const;
+    float noise(const vec3& uvw) const;
 
 private:
     GLFWwindow* window{};
 
     vec3 pos{};
     vec3 speed{};
+
     float speedRef{};
+    bool onGround = false;
+    float jumpStrength{};
+
+    float mountainAmplitude{}, seaLevel{};
+    vec2 mountainTextureSize{};
+    unsigned char* mountainTexture{};
 
     vec3 normal = vec3(0., 1., 0.), frontRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
     vec2 theta{};

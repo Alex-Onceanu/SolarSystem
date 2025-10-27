@@ -117,7 +117,7 @@ float fbm(vec3 x)
     float f = 8.0;
     float a = 1.0;
     float t = 0.0;
-    int numOctaves = 5;
+    int numOctaves = 1;
     for( int i=0; i<numOctaves; i++ )
     {
         t += noise(x * f) * a;
@@ -129,7 +129,7 @@ float fbm(vec3 x)
 
 void generateSphericalFBMnoise()
 {
-    constexpr size_t RESOLUTION = 2048;
+    constexpr size_t RESOLUTION = 1024;
     char img[RESOLUTION * RESOLUTION];
 
     float maxfound = 0.;
@@ -148,8 +148,35 @@ void generateSphericalFBMnoise()
 
             img[i * RESOLUTION + j] = static_cast<char>(CLAMP((x - minfound) / (maxfound - minfound), 0.f, 1.f) * 255.);
         }
-        std::cout << i << std::endl;
+        // std::cout << i << std::endl;
     }
+
+    // blurring the result for the low resolution noise, because it will be used for collisions
+    // and we do not want collisions to be jittery
+    const int NB_IT = 30;
+    const int box = 8;
+    for(int nit = 0; nit < NB_IT; nit++)
+    {
+        for(int i = 0; i < RESOLUTION; i++)
+        {
+            for(int j = 0; j < RESOLUTION; j++)
+            {
+                float mean = 0.;
+                float cpt = 0.;
+                for(int y = -box; y < box; y++)
+                {
+                    for(int x = -box; x < box; x++)
+                    {
+                        mean += img[CLAMP((i + y), 0, (int)RESOLUTION - 1) * RESOLUTION + CLAMP((j + x), 0, (int)RESOLUTION - 1)] / 255.f;
+                        cpt += 1.;
+                    }
+                }
+                img[i * RESOLUTION + j] = static_cast<char>(255.f * mean / cpt);
+            }
+        }
+        std::cout << "nit : " << nit << std::endl;
+    }
+
 
     std::cout << "min : " << minfound << ", max : " << maxfound << std::endl;
 

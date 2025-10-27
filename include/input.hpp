@@ -15,6 +15,7 @@ struct InputData {
 
     float fov;
     float cameraSpeed;
+    float jumpStrength;
 
     float nb_steps_i;
     float nb_steps_j;

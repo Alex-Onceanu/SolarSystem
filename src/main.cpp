@@ -19,7 +19,10 @@ int main()
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init(window);
-    auto camera = std::make_unique<Camera>(window, vec3(0., 120.0, 300.0), vec3(0.,-380.,300.));
+    auto camera = std::make_unique<Camera>(window, vec3(0., 350.0, 300.0));
+    int mw, mh;
+    unsigned char* mountainTex = read_ppm(1, "../assets/lowFreqNoise.pgm", &mw, &mh);
+    camera->setMountainTexture(mountainTex, vec2(mw, mh));
 
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;
@@ -103,10 +106,12 @@ int main()
         glUniform1f(glGetUniformLocation(program, "starVoidThreshold"), inputData.starVoidThreshold);
         glUniform1f(glGetUniformLocation(program, "starFlickering"), inputData.starFlickering);
 
-        std::vector<PlanetData> pdv;
-        PlanetData p1 = { .p = vec3(inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]), .radius = 30. + 300., .mass = inputData.planetMass };
+        std::vector<PlanetData> pdv{};
+        PlanetData p1 = { .p = vec3(inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]), .radius = inputData.planetRadius, .mass = inputData.planetMass };
         pdv.push_back(p1);
         camera->setSpeedRef(inputData.cameraSpeed);
+        camera->setJumpStrength(inputData.jumpStrength);
+        camera->setMountainParams(inputData.mountainAmplitude, inputData.seaLevel);
         camera->update(dt, pdv);
 
         vec3 camPos = camera->getPos();

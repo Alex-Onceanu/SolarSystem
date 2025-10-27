@@ -40,11 +40,11 @@ InputData Input::getInput()
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
     static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
-                            .planetPos{ 0.,-380.,300. }, .planetRadius = 400., .planetMass = 1800000.,
-                            .fov = 60., .cameraSpeed = 80.,
+                            .planetPos{ 0.,-1480.,300. }, .planetRadius = 1400., .planetMass = 2000000000.,
+                            .fov = 60., .cameraSpeed = 300., .jumpStrength = 330.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 100., .atmosFalloff = 5.4, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 60., 
+                            .mountainFrequency = 8., .mountainAmplitude = 120., 
                             .seaLevel = .45, .waterColor{ 0.,0.26,0.46,0.2 }, .refractionindex = 0.75, .fresnel = 2.,
                             .ambientCoef = 0.04, .diffuseCoef = 0.85, .minDiffuse = 0.22, .penumbraCoef = 0.07,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 1073. };
@@ -56,23 +56,24 @@ InputData Input::getInput()
     {
         ImGui::Text("Frame time: %.3f ms", 1000.0f / io.Framerate);
         ImGui::SliderFloat("fov", &data.fov, 10.0, 120.0);
-        ImGui::SliderFloat("camera speed", &data.cameraSpeed, 10.0, 10000.0);
+        ImGui::SliderFloat("camera speed", &data.cameraSpeed, 10.0, 1000.0);
+        ImGui::SliderFloat("jump strength", &data.jumpStrength, 1.0, 500.0);
     }
 
     if (ImGui::CollapsingHeader("Sun"))
     {
-        ImGui::SliderFloat3("sun position", data.sunPos, -500000., 500000.);
-        ImGui::SliderFloat("sun radius", &data.sunRadius, 1.0, 60000.0);
+        ImGui::SliderFloat3("sun position", data.sunPos, -5000., 50000.);
+        ImGui::SliderFloat("sun radius", &data.sunRadius, 1.0, 6000.0);
         ImGui::ColorEdit3("sun color", data.sunColor);
-        ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 240000.0);
+        ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 24000.0);
     }
 
     if (ImGui::CollapsingHeader("Planet"))
     {
-        ImGui::SliderFloat3("planet position", data.planetPos, -500000., 500000.);
+        ImGui::SliderFloat3("planet position", data.planetPos, -50000., 50000.);
         ImGui::SliderFloat("planet radius", &data.planetRadius, 1., 2000.);
         ImGui::SliderFloat("planet mass", &data.planetMass, 1., 10000000000.);
-        ImGui::SliderFloat("mountain height", &data.mountainAmplitude, .01, 600.);
+        ImGui::SliderFloat("mountain height", &data.mountainAmplitude, .01, 300.);
     }
     if (ImGui::CollapsingHeader("Water"))
     {
