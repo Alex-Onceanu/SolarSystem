@@ -191,6 +191,9 @@ unsigned int global_program;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glUniform1f(glGetUniformLocation(global_program, "aspectRatio"), (float)(width) / (float)(height));
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glfwSwapBuffers(window);
 }
 
 unsigned int init(GLFWwindow** window)

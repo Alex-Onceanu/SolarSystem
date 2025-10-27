@@ -9,7 +9,7 @@
 constexpr size_t NB_KEYS = 7;
 
 bool isKeyPressed[NB_KEYS];
-bool isClicked = false;
+bool justClicked = false, justUnclicked = false;
 bool shouldHideCursor = true;
 vec2 mousePos;
 
@@ -41,13 +41,10 @@ void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action,
     if(!isKeyPressed[4] and shouldHideCursor)
     {
         if(button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_PRESS)
-        {
-            isClicked = true;
-        }
+            justClicked = true;
+
         else if(button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_RELEASE)
-        {
-            isClicked = false; // peut mieux faire ?
-        }
+            justUnclicked = true;
     }
     else
     {
@@ -113,7 +110,7 @@ void Camera::walk(const float dt, const PlanetData& closest)
     stepSpeed *= speedRef;
 
     // relative to when the normal is (0, 1, 0)
-    vec3 front = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
+    front = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
     vec3 left = vec3(cosf(theta.x), 0., sinf(theta.x)) * -1.;
     vec3 up = front.cross(left);
 
@@ -177,12 +174,13 @@ void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planet
     }
 }
 
-
+// found this value noise on https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+// is actually a low-frequency version of the heightmap used for rendering the mountains, for collisions
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 mod289(vec4 x){return x - vec4::floor(x * (1.0 / 289.0)) * 289.0;}
 vec4 perm(vec4 x){return mod289(((x * 34.0) + vec4(1.,1.,1.,1.)) * x);}
-
-float noisep(vec3 p) {
+float noisep(vec3 p)
+{
     vec3 a = vec3::floor(p);
     vec3 d = p - a;
     d = d * d * (vec3(3.,3.,3.) - d * 2.);
@@ -209,29 +207,13 @@ float Camera::noise(const vec3& uvw) const
     return std::max(seaLevel, noisep(uvw * 8.));
 }
 
-// float Camera::noise(const vec3& uvw) const
-// {
-//     vec2 uv = vec2(0.5 + atan2(uvw.z, uvw.x) / (2. * M_PIf), 0.5 - asin(uvw.y) / M_PIf);
-//     uv.x *= mountainTextureSize.x, uv.y *= mountainTextureSize.y;
-//     float h = static_cast<float>(mountainTexture[static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[1 + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[-1 + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[-static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[1 + static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[-1 + static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[1 - static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     h += static_cast<float>(mountainTexture[-1 -static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-//     return std::max(seaLevel, h / 9.f);
-// }
-
 float Camera::heightHere(const PlanetData& pl) const
 {
     const float playerHeight = 65.;
 
     float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
 
-    return pl.radius + playerHeight + mountainHeight; // TODO : activate this
+    return pl.radius + playerHeight + mountainHeight;
 }
 
 void Camera::jump(const float dt)
@@ -240,9 +222,33 @@ void Camera::jump(const float dt)
     speed += normal * jumpStrength;
 }
 
-void Camera::update(float& dt, const std::vector<PlanetData>& planets)
+void Camera::dash(float& dt)
 {
+    const float dashCharge = 2.;
+    const float dashStrength = 64.;
+    float t = CLAMP(time - dashStartTime, 0.f, dashCharge) / dashCharge;
+    vec3 F = front * (-t * dashStrength / dt);
+    speed += F;
+    onGround = false;
+    pos += normal * 0.1;
+}
+
+void Camera::update(float& dt, const float& __time, const std::vector<PlanetData>& planets)
+{
+    time = __time;
     updateMouse(dt);
+
+    if(justClicked)
+    {
+        dashStartTime = time;
+        justClicked = false;
+    }
+    else if(justUnclicked)
+    {
+        dash(dt);
+        justUnclicked = false;
+    }
+
     applyGravity(dt, planets);
 
     PlanetData closest = findClosest(planets);

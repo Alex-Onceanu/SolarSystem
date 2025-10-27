@@ -18,7 +18,7 @@ class Camera
 {
 public:
     Camera(GLFWwindow* __window, vec3 spawn);
-    void update(float& dt, const std::vector<PlanetData>& planets);
+    void update(float& dt, const float& __time, const std::vector<PlanetData>& planets);
 
     vec3 getPos() { return pos; }
     vec2 getAngle() { return theta; }
@@ -39,6 +39,7 @@ public:
 private:
     void walk(const float dt, const PlanetData& closest);
     void jump(const float dt);
+    void dash(float& dt);
     void updateMouse(const float dt);
     PlanetData findClosest(const std::vector<PlanetData>& planets);
     void applyGravity(const float& dt, const std::vector<PlanetData>& planets);
@@ -49,6 +50,7 @@ private:
 private:
     GLFWwindow* window{};
 
+    float time{};
     vec3 pos{};
     vec3 speed{};
 
@@ -59,7 +61,10 @@ private:
     float mountainAmplitude{}, seaLevel{};
 
     vec3 normal = vec3(0., 1., 0.), frontRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
+    vec3 front = frontRef;
     vec2 theta{};
+
+    float dashStartTime{};
 };
 
 #endif // CAMERA_H

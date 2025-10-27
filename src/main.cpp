@@ -24,7 +24,6 @@ int main()
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;
     auto lastSecondTime = startTime;
-    unsigned int nbFramesThisSecond = 0;
 
     glUniform1f(glGetUniformLocation(program, "aspectRatio"), static_cast<float>(RESOLUTION_W) / static_cast<float>(RESOLUTION_H));
 
@@ -36,21 +35,15 @@ int main()
     glClear(GL_COLOR_BUFFER_BIT);
     glfwSwapBuffers(window);
 
-    // mainloop
+    float time = 0.;
+
+    // mainloop here
     while (!glfwWindowShouldClose(window))
     {
         auto currentTime = std::chrono::high_resolution_clock::now();
-        float elapsedTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-        float timeSinceLastSecond = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastSecondTime).count();
         float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
         prevTime = currentTime;
-
-        nbFramesThisSecond++;
-        if(timeSinceLastSecond >= 1.0f)
-        {
-            nbFramesThisSecond = 0;
-            lastSecondTime = currentTime;
-        }
+        time += dt; // time is sum of dt so that we can rewind time and morph it
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, earthTexture);
@@ -61,7 +54,7 @@ int main()
         glUniform1i(glGetUniformLocation(program, "opticalDepthTexture"), 1);
 
         auto inputData = Input::getInput();
-        glUniform1f(glGetUniformLocation(program, "time"), elapsedTime);
+        glUniform1f(glGetUniformLocation(program, "time"), time);
         glUniform3f(glGetUniformLocation(program, "sunPos"), 
             inputData.sunPos[0], inputData.sunPos[1], inputData.sunPos[2]);
         glUniform1f(glGetUniformLocation(program, "sunRadius"), inputData.sunRadius);
@@ -109,7 +102,7 @@ int main()
         camera->setSpeedRef(inputData.cameraSpeed);
         camera->setJumpStrength(inputData.jumpStrength);
         camera->setMountainParams(inputData.mountainAmplitude, inputData.seaLevel);
-        camera->update(dt, pdv);
+        camera->update(dt, time, pdv);
 
         vec3 camPos = camera->getPos();
         glUniform3f(glGetUniformLocation(program ,"cameraPos"), camPos.x, camPos.y, camPos.z);
@@ -139,7 +132,6 @@ int main()
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-        
     }
     Input::destroy();
 
