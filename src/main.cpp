@@ -20,9 +20,6 @@ int main()
 
     Input::init(window);
     auto camera = std::make_unique<Camera>(window, vec3(0., 350.0, 300.0));
-    int mw, mh;
-    unsigned char* mountainTex = read_ppm(1, "../assets/lowFreqNoise.pgm", &mw, &mh);
-    camera->setMountainTexture(mountainTex, vec2(mw, mh));
 
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;

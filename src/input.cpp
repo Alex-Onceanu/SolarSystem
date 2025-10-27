@@ -40,8 +40,8 @@ InputData Input::getInput()
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
     static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
-                            .planetPos{ 0.,-1480.,300. }, .planetRadius = 1400., .planetMass = 2000000000.,
-                            .fov = 60., .cameraSpeed = 300., .jumpStrength = 330.,
+                            .planetPos{ 0.,-1080.,300. }, .planetRadius = 1000., .planetMass = 2500000000.,
+                            .fov = 60., .cameraSpeed = 300., .jumpStrength = 430.,
                             .nb_steps_i = 8.1, .nb_steps_j = 4.1,
                             .atmosRadius = 100., .atmosFalloff = 5.4, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
                             .mountainFrequency = 8., .mountainAmplitude = 120., 
@@ -57,7 +57,7 @@ InputData Input::getInput()
         ImGui::Text("Frame time: %.3f ms", 1000.0f / io.Framerate);
         ImGui::SliderFloat("fov", &data.fov, 10.0, 120.0);
         ImGui::SliderFloat("camera speed", &data.cameraSpeed, 10.0, 1000.0);
-        ImGui::SliderFloat("jump strength", &data.jumpStrength, 1.0, 500.0);
+        ImGui::SliderFloat("jump strength", &data.jumpStrength, 1.0, 1000.0);
     }
 
     if (ImGui::CollapsingHeader("Sun"))

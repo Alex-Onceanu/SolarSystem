@@ -18,7 +18,6 @@ class Camera
 {
 public:
     Camera(GLFWwindow* __window, vec3 spawn);
-    ~Camera() { free(mountainTexture); }
     void update(float& dt, const std::vector<PlanetData>& planets);
 
     vec3 getPos() { return pos; }
@@ -31,7 +30,6 @@ public:
     void setSpeedRef(const float& v) { speedRef = v; }
     void setJumpStrength(const float& v) { jumpStrength = v; }
     void setMountainParams(const float& mountainAmp, const float& sea) { mountainAmplitude = mountainAmp; seaLevel = sea; }
-    void setMountainTexture(unsigned char* tex, vec2 size) { mountainTexture = tex; mountainTextureSize = size; }
 
     static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
@@ -59,8 +57,6 @@ private:
     float jumpStrength{};
 
     float mountainAmplitude{}, seaLevel{};
-    vec2 mountainTextureSize{};
-    unsigned char* mountainTexture{};
 
     vec3 normal = vec3(0., 1., 0.), frontRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
     vec2 theta{};

@@ -177,21 +177,53 @@ void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planet
     }
 }
 
+
+float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 mod289(vec4 x){return x - vec4::floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 perm(vec4 x){return mod289(((x * 34.0) + vec4(1.,1.,1.,1.)) * x);}
+
+float noisep(vec3 p) {
+    vec3 a = vec3::floor(p);
+    vec3 d = p - a;
+    d = d * d * (vec3(3.,3.,3.) - d * 2.);
+
+    vec4 b = vec4(a.x, a.x, a.y, a.y) + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = perm(vec4(b.x, b.y, b.x, b.y));
+    vec4 k2 = perm(vec4(k1.x, k1.y, k1.x, k1.y) + vec4(b.z, b.z, b.w, b.w));
+
+    vec4 c = k2 + vec4(a.z, a.z, a.z, a.z);
+    vec4 k3 = perm(c);
+    vec4 k4 = perm(c + vec4(1.,1.,1.,1.));
+
+    vec4 o1 = vec4::fract(k3 * (1.0 / 41.0));
+    vec4 o2 = vec4::fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = vec2(o3.y, o3.w) * d.x + vec2(o3.x, o3.z) * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
+}
+
 float Camera::noise(const vec3& uvw) const
 {
-    vec2 uv = vec2(0.5 + atan2(uvw.z, uvw.x) / (2. * M_PIf), 0.5 - asin(uvw.y) / M_PIf);
-    uv.x *= mountainTextureSize.x, uv.y *= mountainTextureSize.y;
-    float h = static_cast<float>(mountainTexture[static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[1 + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[-1 + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[-static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[1 + static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[-1 + static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[1 - static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    h += static_cast<float>(mountainTexture[-1 -static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
-    return std::max(seaLevel, h / 9.f);
+    return std::max(seaLevel, noisep(uvw * 8.));
 }
+
+// float Camera::noise(const vec3& uvw) const
+// {
+//     vec2 uv = vec2(0.5 + atan2(uvw.z, uvw.x) / (2. * M_PIf), 0.5 - asin(uvw.y) / M_PIf);
+//     uv.x *= mountainTextureSize.x, uv.y *= mountainTextureSize.y;
+//     float h = static_cast<float>(mountainTexture[static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[1 + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[-1 + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[-static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[1 + static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[-1 + static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[1 - static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     h += static_cast<float>(mountainTexture[-1 -static_cast<int>(mountainTextureSize.x) + static_cast<int>(uv.y * mountainTextureSize.x + uv.x)]) / 255.f;
+//     return std::max(seaLevel, h / 9.f);
+// }
 
 float Camera::heightHere(const PlanetData& pl) const
 {
@@ -199,7 +231,7 @@ float Camera::heightHere(const PlanetData& pl) const
 
     float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
 
-    return pl.radius + playerHeight + mountainAmplitude; // TODO : activate this
+    return pl.radius + playerHeight + mountainHeight; // TODO : activate this
 }
 
 void Camera::jump(const float dt)
@@ -213,13 +245,12 @@ void Camera::update(float& dt, const std::vector<PlanetData>& planets)
     updateMouse(dt);
     applyGravity(dt, planets);
 
-    if(isKeyPressed[5]) jump(dt);
-
     PlanetData closest = findClosest(planets);
     updatePlanetBasis(closest);
 
     // if(onGround) 
     walk(dt, closest);
+    if(isKeyPressed[5]) jump(dt);
     
     pos += speed * dt; // Newton's second law
 }

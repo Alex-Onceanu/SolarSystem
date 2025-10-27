@@ -269,7 +269,7 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
     else clr = vec3(157., 161., 154.) / 255.;
 
-    vec2 eps = vec2(0.04, 0.);
+    vec2 eps = vec2(0.05, 0.);
 
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
     vec3 sample1 = mtn.xyz + planetBasis * eps.xyy;
@@ -285,15 +285,13 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     float gradz = (h2 - h2b) / (2. * eps.x);
 
     // this only works when the normal is aligned with (Oy), so it needs to be rotated
-    vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
+    // vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
+    vec3 localNormal = normalize(sphereNormal - mountainAmplitude * gradx * normalize(sample1 - sample1b) - mountainAmplitude * gradz * normalize(sample2 - sample2b));
 
-    // TODO : no grass grows on slope
-    // float grassOnSlope = 0.5;
-    // if(abs(dot(localNormal, sphereNormal)) < grassOnSlope) 
-    //     clr = vec3(195.,146.,79.) / 255.;
-    // clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.8, abs(dot(localNormal, sphereNormal))));
+    // no grass grows on slope
+    clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.6, abs(dot(localNormal, sphereNormal))));
 
-    float diffuse = max(0.0, dot(localNormal, normalize(lightSource - mtn.xyz)));
+    float diffuse = max(minDiffuse, dot(localNormal, normalize(lightSource - mtn.xyz)));
     float penumbra = smoothstep(0.1, 0.6, n); // trick for faking global illumination
 
     float light = diffuseCoef * diffuse * sphereDiffuse + penumbraCoef * penumbra;
