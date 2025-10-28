@@ -9,7 +9,7 @@
 constexpr size_t NB_KEYS = 7;
 
 bool isKeyPressed[NB_KEYS];
-bool justClicked = false, justUnclicked = false;
+bool justClicked = false, justUnclicked = false, rightClicking = false;
 bool shouldHideCursor = true;
 vec2 mousePos;
 
@@ -45,6 +45,8 @@ void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action,
 
         else if(button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_RELEASE)
             justUnclicked = true;
+
+        rightClicking = (button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS or action == GLFW_REPEAT);   
     }
     else
     {
@@ -126,7 +128,7 @@ void Camera::walk(const float dt, const PlanetData& closest)
     pos += up * stepSpeed.y * dt;
 }
 
-void Camera::updateMouse(const float dt)
+void Camera::updateMouse()
 {
     if(isKeyPressed[4] or not shouldHideCursor)
     {
@@ -138,10 +140,25 @@ void Camera::updateMouse(const float dt)
         glfwSetCursorPos(window, 0., 0.);
     }
 
+    if(justClicked)
+    {
+        dashStartTime = time;
+        justClicked = false;
+        charging = true;
+    }
+    else if(justUnclicked)
+    {
+        dash();
+        justUnclicked = false;
+        charging = false;
+        tDash = 0.;
+    }
+
     theta.x -= mousePos.x * (0.00032f * M_PIf);
     theta.y -= mousePos.y * (0.00032f * M_PIf);
     theta.y = std::max(-M_PIf / 2.0f + 0.0001f, std::min(theta.y, M_PIf / 2.0f - 0.0001f));
     mousePos = vec2();
+    rewinding = rightClicking;
 }
 
 PlanetData Camera::findClosest(const std::vector<PlanetData>& planets)
@@ -211,43 +228,39 @@ float Camera::noise(const vec3& uvw) const
 float Camera::heightHere(const PlanetData& pl) const
 {
     const float playerHeight = 65.;
-
     float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
-
     return pl.radius + playerHeight + mountainHeight;
 }
 
 void Camera::jump(const float dt)
 {
     if(not onGround) return;
-    gravitySpeed += normal * (jumpStrength / dt);
+    gravitySpeed += normal * (jumpStrength);
 }
 
-void Camera::dash(float& dt)
+void Camera::dash()
 {
-    const float dashCharge = 2.;
-    const float dashStrength = 32.;
-    float t = CLAMP(time - dashStartTime, 0.f, dashCharge) / dashCharge;
-    vec3 F = front * (-t * dashStrength / dt);
+    const float dashStrength = 2000.;
+    vec3 F = front * (-getDashTimer() * dashStrength);
     speed += F;
     onGround = false;
-    pos += normal;
+    tDash = 0.;
 }
 
 void Camera::update(float& dt, const float& __time, const std::vector<PlanetData>& planets)
 {
     time = __time;
-    updateMouse(dt);
-
-    if(justClicked)
+    updateMouse();
+    if(rewinding)
     {
-        dashStartTime = time;
-        justClicked = false;
+        dt *= 0.1;
+        speed = vec3();
+        gravitySpeed = vec3();
     }
-    else if(justUnclicked)
+    else if(charging) // bullet time baby
     {
-        dash(dt);
-        justUnclicked = false;
+        tDash = CLAMP(time - dashStartTime, 0.f, bulletTimeDuration);
+        dt *= std::max(0.1f, getBulletTimer() * getBulletTimer());
     }
 
     applyGravity(dt, planets);

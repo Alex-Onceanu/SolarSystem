@@ -187,13 +187,30 @@ void setupMesh()
 
 // will only be used by framebuffer_size_callback to update aspect ratio in the shader
 unsigned int global_program;
+unsigned int global_ui_program;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glUniform1f(glGetUniformLocation(global_program, "aspectRatio"), (float)(width) / (float)(height));
+    glUseProgram(global_ui_program);
+    glUniform1f(glGetUniformLocation(global_ui_program, "aspectRatio"), (float)(width) / (float)(height));
+    glUseProgram(global_program);
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwSwapBuffers(window);
+}
+
+unsigned int initUI()
+{
+    char *vs_source = read_shader("../shaders/main.vert");
+    char *fs_source = read_shader("../shaders/ui.frag");
+
+    global_ui_program = create_program(vs_source, fs_source);
+
+    free(vs_source);
+    free(fs_source);
+
+    return global_ui_program;
 }
 
 unsigned int init(GLFWwindow** window)
@@ -238,6 +255,8 @@ unsigned int init(GLFWwindow** window)
     free(fs_source);
 
     setupMesh();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
 
     return global_program;
 }

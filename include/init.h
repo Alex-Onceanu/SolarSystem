@@ -35,6 +35,7 @@ unsigned int init(GLFWwindow** window);
 
 // first render pass will be in a low res texture
 void generateLowResBuf(unsigned int* frameBuf, unsigned int* outTexture);
+unsigned int initUI();
 
 #ifdef __cplusplus
 }

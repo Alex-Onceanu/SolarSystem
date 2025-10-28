@@ -14,6 +14,7 @@ int main()
 {
     GLFWwindow* window = nullptr;
     unsigned int program = init(&window);
+    unsigned int UIprogram = initUI();
 
     auto earthTexture = init_texture("../assets/eart.ppm");
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
@@ -26,6 +27,9 @@ int main()
     auto lastSecondTime = startTime;
 
     glUniform1f(glGetUniformLocation(program, "aspectRatio"), static_cast<float>(RESOLUTION_W) / static_cast<float>(RESOLUTION_H));
+    glUseProgram(UIprogram);
+    glUniform1f(glGetUniformLocation(UIprogram, "aspectRatio"), static_cast<float>(RESOLUTION_W) / static_cast<float>(RESOLUTION_H));
+    glUseProgram(program);
 
     unsigned int frameBuf, outTexture;
     generateLowResBuf(&frameBuf, &outTexture);
@@ -41,6 +45,8 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         auto currentTime = std::chrono::high_resolution_clock::now();
+        // realTime will only be used for UI and "real world" durations
+        float realTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
         prevTime = currentTime;
         time += dt; // time is sum of dt so that we can rewind time and morph it
@@ -102,7 +108,7 @@ int main()
         camera->setSpeedRef(inputData.cameraSpeed);
         camera->setJumpStrength(inputData.jumpStrength);
         camera->setMountainParams(inputData.mountainAmplitude, inputData.seaLevel);
-        camera->update(dt, time, pdv);
+        camera->update(dt, realTime, pdv);
 
         vec3 camPos = camera->getPos();
         glUniform3f(glGetUniformLocation(program ,"cameraPos"), camPos.x, camPos.y, camPos.z);
@@ -117,7 +123,7 @@ int main()
         int W, H;
         glfwGetWindowSize(window, &W, &H);
 
-        // Draw
+        // Main render pass here
         glBindFramebuffer(GL_FRAMEBUFFER, frameBuf);
         glViewport(0, 0, LOW_RES_W, LOW_RES_H);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -127,6 +133,17 @@ int main()
         glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuf);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         glBlitFramebuffer(0, 0, LOW_RES_W, LOW_RES_H, 0, 0, W, H, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+        // Draw UI over the framebuffer
+        glUseProgram(UIprogram);
+        glUniform1f(glGetUniformLocation(UIprogram, "time"), time);
+        glUniform1f(glGetUniformLocation(UIprogram, "tCharge"), camera->getDashTimer());
+        glUniform1f(glGetUniformLocation(UIprogram, "tBulletTime"), camera->getBulletTimer());
+        glUniform1f(glGetUniformLocation(UIprogram, "tRewind"), camera->isRewinding() ? 1. : 0.);
+        
+        glViewport(0, 0, W, H);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+        glUseProgram(program);
 
         Input::renderInterface();
 

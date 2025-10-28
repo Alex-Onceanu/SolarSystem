@@ -31,6 +31,10 @@ public:
     void setJumpStrength(const float& v) { jumpStrength = v; }
     void setMountainParams(const float& mountainAmp, const float& sea) { mountainAmplitude = mountainAmp; seaLevel = sea; }
 
+    float getDashTimer() { return std::min(dashCharge, tDash) / dashCharge; }
+    float getBulletTimer() { return tDash / bulletTimeDuration; }
+    bool isRewinding() { return rewinding; }
+
     static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
@@ -39,8 +43,8 @@ public:
 private:
     void walk(const float dt, const PlanetData& closest);
     void jump(const float dt);
-    void dash(float& dt);
-    void updateMouse(const float dt);
+    void dash();
+    void updateMouse();
     PlanetData findClosest(const std::vector<PlanetData>& planets);
     void applyGravity(const float& dt, const std::vector<PlanetData>& planets);
     void updatePlanetBasis(const PlanetData& closest);
@@ -66,6 +70,12 @@ private:
     vec2 theta{};
 
     float dashStartTime{};
+    bool charging = false;
+    const float dashCharge = 1.5;
+    const float bulletTimeDuration = 4.;
+    float tDash = 0.; // 0 when not charging, 1 when full charging
+
+    bool rewinding = false;
 };
 
 #endif // CAMERA_H
