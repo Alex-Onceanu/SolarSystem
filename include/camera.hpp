@@ -53,6 +53,7 @@ private:
     float time{};
     vec3 pos{};
     vec3 speed{};
+    vec3 gravitySpeed{};
 
     float speedRef{};
     bool onGround = false;

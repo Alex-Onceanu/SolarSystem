@@ -162,13 +162,14 @@ void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planet
     {
         vec3 Fdir = (pos - e.p).normalize();
         vec3 F = Fdir * (-e.mass / (e.p - pos).dot(e.p - pos));
-        speed += F * dt;
+        gravitySpeed += F * dt; // Newton's second law + integrating acceleration
         float h = heightHere(e);
         if((e.p - pos).length() <= h)
         {
             onGround = true;
-            speed = vec3();
+            gravitySpeed = vec3(); // reset gravity when landing
             pos = (pos - e.p).normalize() * h + e.p;
+            speed -= normal * normal.dot(speed); // project speed on normal plane (slide)
             break;
         }
     }
@@ -219,18 +220,18 @@ float Camera::heightHere(const PlanetData& pl) const
 void Camera::jump(const float dt)
 {
     if(not onGround) return;
-    speed += normal * jumpStrength;
+    gravitySpeed += normal * (jumpStrength / dt);
 }
 
 void Camera::dash(float& dt)
 {
     const float dashCharge = 2.;
-    const float dashStrength = 64.;
+    const float dashStrength = 32.;
     float t = CLAMP(time - dashStartTime, 0.f, dashCharge) / dashCharge;
     vec3 F = front * (-t * dashStrength / dt);
     speed += F;
     onGround = false;
-    pos += normal * 0.1;
+    pos += normal;
 }
 
 void Camera::update(float& dt, const float& __time, const std::vector<PlanetData>& planets)
@@ -254,9 +255,10 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     PlanetData closest = findClosest(planets);
     updatePlanetBasis(closest);
 
-    // if(onGround) 
+    // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
     walk(dt, closest);
     if(isKeyPressed[5]) jump(dt);
-    
-    pos += speed * dt; // Newton's second law
+
+    pos += speed * dt; // position is integral of speed
+    pos += gravitySpeed * dt;
 }

@@ -41,7 +41,7 @@ InputData Input::getInput()
 
     static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
                             .planetPos{ 0.,-580.,300. }, .planetRadius = 500., .planetMass = 700000000.,
-                            .fov = 60., .cameraSpeed = 230., .jumpStrength = 400.,
+                            .fov = 60., .cameraSpeed = 230., .jumpStrength = 6.4,
                             .nb_steps_i = 9.01, .nb_steps_j = 6.01,
                             .atmosRadius = 204., .atmosFalloff = 6.0, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
                             .mountainFrequency = 8., .mountainAmplitude = 80., 

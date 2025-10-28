@@ -264,13 +264,11 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
 
         shouldReflect = 1. - pow(refrCoef, fresnel);
     }
-    // TODO : smooth palette instead of step
-    else if(n < seaLevel + 0.1) clr = vec3(216., 197., 150.) / 255.;
-    else if(n < 0.8) clr = vec3(159., 193., 100.) / 255.;
-    else clr = vec3(157., 161., 154.) / 255.;
-
+    else if(n < seaLevel + 0.05) clr = vec3(216., 197., 150.) / 255.;
+    // else if(n < 0.75) clr = vec3(90.,139.,93.) / 255.; else clr = vec3(205., 200., 200.) / 255.; // snow
+    else clr = mix(vec3(90.,139.,93.) / 255., vec3(202., 202., 186.) / 255., smoothstep(seaLevel + 0.07, 0.85, n));
+    
     vec2 eps = vec2(0.06, 0.);
-
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
     vec3 sample1 = mtn.xyz + planetBasis * eps.xyy;
     float h1 = noise(normalize(sample1 - spherePos), n <= seaLevel + 0.0001);
@@ -288,8 +286,8 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     // vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
     vec3 localNormal = normalize(sphereNormal - mountainAmplitude * gradx * normalize(sample1 - sample1b) - mountainAmplitude * gradz * normalize(sample2 - sample2b));
 
-    // no grass grows on slope
-    // clr = mix(clr, vec3(0.34, 0.34, 0.34), 1. - smoothstep(0.0, 0.6, abs(dot(localNormal, sphereNormal))));
+    // no grass grows on slope, but it looked kinda ugly
+    // clr = mix(clr, vec3(205., 200., 200.) / 255., 1. - smoothstep(0.0, 0.6, abs(dot(localNormal, sphereNormal))));
 
     float diffuse = max(-1., dot(localNormal, normalize(lightSource - mtn.xyz)));
     float penumbra = smoothstep(0.1, 0.6, n); // trick for faking global illumination
@@ -431,6 +429,13 @@ void main()
     vec2 uv = vFragPos;
     uv.x *= aspectRatio;
 
+    float theta = atan(uv.y, uv.x);
+    if(length(uv) < 0.15 && length(uv) > 0.1 && theta < 3.14159 * sin(time))
+    {
+        outColor = vec4(1., 0., 0., 0.0);
+        return;
+    }
+
     vec3 rayDir = vec3(uv.x, uv.y, 2. / tan(0.5 * fov));
     rayDir.yz *= rot2D(-cameraRotation.y);
     rayDir.xz *= rot2D(cameraRotation.x);
@@ -440,5 +445,5 @@ void main()
     vec3 totalLight = raytraceMap(rayDir, cameraPos + distToScreen * rayDir);
 
     float edge = length(dFdy(totalLight));
-    outColor = vec4(totalLight + 0.55 * edge, 1.0);
+    outColor = vec4(totalLight, 1.0);
 }
