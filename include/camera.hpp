@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 
 #include <vector>
+#include <deque>
+#include <memory>
 
 #include "math.hpp"
 
@@ -56,7 +58,7 @@ private:
 
     float time{};
     vec3 pos{};
-    vec3 speed{};
+    vec3 dashSpeed{};
     vec3 gravitySpeed{};
 
     float speedRef{};
@@ -75,7 +77,12 @@ private:
     const float bulletTimeDuration = 4.;
     float tDash = 0.; // 0 when not charging, 1 when full charging
 
+    std::unique_ptr<std::deque<vec3>> timeline;
+    unsigned int lastTimelineTick = 0;
     bool rewinding = false;
+    float startedRewinding = 0.;
+    int lastRewindingTick = 0;
+    vec3 rewindingStart{};
 };
 
 #endif // CAMERA_H

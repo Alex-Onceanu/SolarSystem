@@ -9,13 +9,14 @@
 constexpr size_t NB_KEYS = 7;
 
 bool isKeyPressed[NB_KEYS];
-bool justClicked = false, justUnclicked = false, rightClicking = false;
+bool justClicked = false, justUnclicked = false, rightClicking = false, justRightClicked = false;
 bool shouldHideCursor = true;
 vec2 mousePos;
 
 Camera::Camera(GLFWwindow* __window, vec3 spawn)
     : window(__window), pos(spawn)
 {
+    timeline = std::make_unique<std::deque<vec3>>();
     glfwSetKeyCallback(window, glfwKeyCallback);
     glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
     glfwSetCharCallback(window, glfwCharCallback);
@@ -28,6 +29,46 @@ Camera::Camera(GLFWwindow* __window, vec3 spawn)
     { 
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
+}
+
+// found this value noise on https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+// is actually a low-frequency version of the heightmap used for rendering the mountains, for collisions
+float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 mod289(vec4 x){return x - vec4::floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 perm(vec4 x){return mod289(((x * 34.0) + vec4(1.,1.,1.,1.)) * x);}
+float noisep(vec3 p)
+{
+    vec3 a = vec3::floor(p);
+    vec3 d = p - a;
+    d = d * d * (vec3(3.,3.,3.) - d * 2.);
+
+    vec4 b = vec4(a.x, a.x, a.y, a.y) + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = perm(vec4(b.x, b.y, b.x, b.y));
+    vec4 k2 = perm(vec4(k1.x, k1.y, k1.x, k1.y) + vec4(b.z, b.z, b.w, b.w));
+
+    vec4 c = k2 + vec4(a.z, a.z, a.z, a.z);
+    vec4 k3 = perm(c);
+    vec4 k4 = perm(c + vec4(1.,1.,1.,1.));
+
+    vec4 o1 = vec4::fract(k3 * (1.0 / 41.0));
+    vec4 o2 = vec4::fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = vec2(o3.y, o3.w) * d.x + vec2(o3.x, o3.z) * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
+}
+
+float Camera::noise(const vec3& uvw) const
+{
+    return std::max(seaLevel, noisep(uvw * 8.));
+}
+
+float Camera::heightHere(const PlanetData& pl) const
+{
+    const float playerHeight = 65.;
+    float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
+    return pl.radius + playerHeight + mountainHeight;
 }
 
 void Camera::glfwCharCallback(GLFWwindow* window, unsigned int c)
@@ -45,6 +86,9 @@ void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action,
 
         else if(button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_RELEASE)
             justUnclicked = true;
+
+        if(button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS)
+            justRightClicked = true;
 
         rightClicking = (button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS or action == GLFW_REPEAT);   
     }
@@ -140,7 +184,13 @@ void Camera::updateMouse()
         glfwSetCursorPos(window, 0., 0.);
     }
 
-    if(justClicked)
+    if(justRightClicked)
+    {
+        startedRewinding = time;
+        justRightClicked = false;
+        rewindingStart = timeline->front();
+    }
+    else if(justClicked)
     {
         dashStartTime = time;
         justClicked = false;
@@ -186,50 +236,10 @@ void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planet
             onGround = true;
             gravitySpeed = vec3(); // reset gravity when landing
             pos = (pos - e.p).normalize() * h + e.p;
-            speed -= normal * normal.dot(speed); // project speed on normal plane (slide)
+            dashSpeed -= normal * normal.dot(dashSpeed); // project speed on normal plane (slide)
             break;
         }
     }
-}
-
-// found this value noise on https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
-// is actually a low-frequency version of the heightmap used for rendering the mountains, for collisions
-float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
-vec4 mod289(vec4 x){return x - vec4::floor(x * (1.0 / 289.0)) * 289.0;}
-vec4 perm(vec4 x){return mod289(((x * 34.0) + vec4(1.,1.,1.,1.)) * x);}
-float noisep(vec3 p)
-{
-    vec3 a = vec3::floor(p);
-    vec3 d = p - a;
-    d = d * d * (vec3(3.,3.,3.) - d * 2.);
-
-    vec4 b = vec4(a.x, a.x, a.y, a.y) + vec4(0.0, 1.0, 0.0, 1.0);
-    vec4 k1 = perm(vec4(b.x, b.y, b.x, b.y));
-    vec4 k2 = perm(vec4(k1.x, k1.y, k1.x, k1.y) + vec4(b.z, b.z, b.w, b.w));
-
-    vec4 c = k2 + vec4(a.z, a.z, a.z, a.z);
-    vec4 k3 = perm(c);
-    vec4 k4 = perm(c + vec4(1.,1.,1.,1.));
-
-    vec4 o1 = vec4::fract(k3 * (1.0 / 41.0));
-    vec4 o2 = vec4::fract(k4 * (1.0 / 41.0));
-
-    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
-    vec2 o4 = vec2(o3.y, o3.w) * d.x + vec2(o3.x, o3.z) * (1.0 - d.x);
-
-    return o4.y * d.y + o4.x * (1.0 - d.y);
-}
-
-float Camera::noise(const vec3& uvw) const
-{
-    return std::max(seaLevel, noisep(uvw * 8.));
-}
-
-float Camera::heightHere(const PlanetData& pl) const
-{
-    const float playerHeight = 65.;
-    float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
-    return pl.radius + playerHeight + mountainHeight;
 }
 
 void Camera::jump(const float dt)
@@ -240,9 +250,9 @@ void Camera::jump(const float dt)
 
 void Camera::dash()
 {
-    const float dashStrength = 2000.;
+    const float dashStrength = 1330.;
     vec3 F = front * (-getDashTimer() * dashStrength);
-    speed += F;
+    dashSpeed = F;
     onGround = false;
     tDash = 0.;
 }
@@ -251,11 +261,28 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
 {
     time = __time;
     updateMouse();
-    if(rewinding)
+    PlanetData closest = findClosest(planets);
+    if(rewinding and not timeline->empty())
     {
-        dt *= 0.1;
-        speed = vec3();
+        // dt *= 0.1;
+        dashSpeed = vec3();
         gravitySpeed = vec3();
+        float rewindingSince = 10. * (time - startedRewinding);
+        float t = 1. - CLAMP(rewindingSince - static_cast<float>(static_cast<int>(rewindingSince)), 0.f, 1.f); // fract
+        // t = tanh(2. * t - 2.) + 1.;
+        vec3 end = timeline->front();
+        pos = rewindingStart * t + end * (1. - t);
+        // std::cout << rewindingStart << ", " << end << std::endl;
+        updatePlanetBasis(closest);
+
+        auto tick = static_cast<unsigned int>(rewindingSince); // floor
+        if(tick != lastRewindingTick)
+        {
+            rewindingStart = timeline->front();
+            pos = rewindingStart;
+            timeline->pop_front();
+            lastRewindingTick = tick;
+        }
     }
     else if(charging) // bullet time baby
     {
@@ -263,15 +290,27 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         dt *= std::max(0.1f, getBulletTimer() * getBulletTimer());
     }
 
+
+    auto tick = static_cast<unsigned int>(10. * time); // floor
+    if(tick != lastTimelineTick and not rewinding)
+    {
+        const size_t MAX_NB_TICKS = 10000;
+        if(timeline->size() >= MAX_NB_TICKS)
+            timeline->pop_back();
+
+        timeline->push_front(pos);
+        lastTimelineTick = tick;
+    }
+
     applyGravity(dt, planets);
-
-    PlanetData closest = findClosest(planets);
     updatePlanetBasis(closest);
-
     // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
-    walk(dt, closest);
-    if(isKeyPressed[5]) jump(dt);
+    if(not rewinding)
+    {
+        walk(dt, closest);
+        if(isKeyPressed[5]) jump(dt);
+    }
 
-    pos += speed * dt; // position is integral of speed
+    pos += dashSpeed * dt; // position is integral of speed
     pos += gravitySpeed * dt;
 }

@@ -19,7 +19,7 @@ void main()
     vec2 uv = vFragPos;
     uv.x *= aspectRatio;
     const float PI = 3.1415926536;
-    float theta = -atan(-uv.x, -uv.y);
+    float theta = atan(-uv.x, -uv.y);
 
     vec2 shakedUV = uv + 0.02 * pow(tCharge, 2.) * (-1. + 2. * vec2(random(time, time * time), random(random(time, time * time), random(time * time, time))));
     float dashCharge = smoothstep(0.04, 0.05, length(shakedUV)) * smoothstep(-0.07, -0.06, -length(shakedUV)) * step(theta, PI * (2. * tCharge - 1.));
