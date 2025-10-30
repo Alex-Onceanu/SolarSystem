@@ -159,8 +159,8 @@ void Camera::walk(const float dt, const PlanetData& closest)
 
     // relative to when the normal is (0, 1, 0)
     back = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
-    vec3 left = vec3(cosf(theta.x), 0., sinf(theta.x)) * -1.;
-    vec3 up = back.cross(left);
+    left = vec3(cosf(theta.x), 0., sinf(theta.x)) * -1.;
+    up = back.cross(left);
 
     // change of basis
     back = vec3(back.dot(vec3(-leftRef.x, normal.x, backRef.x)), back.dot(vec3(-leftRef.y, normal.y, backRef.y)), back.dot(vec3(-leftRef.z, normal.z, backRef.z)));
@@ -261,20 +261,20 @@ void Camera::dash()
 
 void Camera::bluePortal()
 {
-    portalPlane1 = backRef;
+    portalPlane1 = back;
     portalPos1 = pos - back * distToPortal;
     portalSize1 = 60.; // TODO : Tween size for portal spawn
     bluePortalPressed = false;
-    portalBasis1.C1 = leftRef * -1., portalBasis1.C2 = normal, portalBasis1.C3 = backRef;
+    portalBasis1.C1 = left * -1., portalBasis1.C2 = up, portalBasis1.C3 = back;
 }
 
 void Camera::redPortal()
 {
-    portalPlane2 = backRef; // TODO : back instead of backref and view matrix instead of planetBasis
+    portalPlane2 = back; // TODO : back instead of backref and view matrix instead of planetBasis
     portalPos2 = pos - back * distToPortal;
     portalSize2 = 60.; // TODO : Tween size for portal spawn
     redPortalPressed = false;
-    portalBasis2.C1 = leftRef * -1., portalBasis2.C2 = normal, portalBasis2.C3 = backRef;
+    portalBasis2.C1 = left * -1., portalBasis2.C2 = up, portalBasis2.C3 = back;
 }
 
 // same function is used for rendering the portals (see main.frag)
@@ -355,6 +355,7 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         lastTimelineTick = tick;
     }
 
+    updatePlanetBasis(closest);
     applyGravity(dt, planets);
     // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
     if(not rewinding)
@@ -362,12 +363,12 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         if(bluePortalPressed) bluePortal();
         if(redPortalPressed) redPortal();
 
+        teleportThroughPortal();
+        updatePlanetBasis(closest);
+
         walk(dt, closest);
         if(isKeyPressed[5] and onGround) jump(dt);
-
-        teleportThroughPortal();
     }
-    updatePlanetBasis(closest);
 
     oldPos = pos;
     pos += dashSpeed * dt; // position is integral of speed

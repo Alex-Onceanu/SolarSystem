@@ -100,7 +100,7 @@ struct vec4 {
 struct mat3 {
     vec3 C1, C2, C3;
 
-    mat3() : C1(vec3()), C2(vec3()), C3(vec3()) {}
+    mat3() : C1(vec3(1.,0.,0.)), C2(vec3(0.,1.,0.)), C3(vec3(0.,0.,1.)) {}
     mat3(vec3 m[3]) { C1 = m[0]; C2 = m[1]; C3 = m[2]; }
     mat3(const vec3& c1, const vec3& c2, const vec3& c3) : C1(c1), C2(c2), C3(c3) {}
 

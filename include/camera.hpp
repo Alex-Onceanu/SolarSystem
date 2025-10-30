@@ -84,7 +84,7 @@ private:
     float mountainAmplitude{}, seaLevel{};
 
     vec3 normal = vec3(0., 1., 0.), backRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
-    vec3 back = backRef;
+    vec3 up = normal, back = backRef, left = leftRef;
     vec2 theta{};
 
     float dashStartTime{};
