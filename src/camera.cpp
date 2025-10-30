@@ -263,7 +263,7 @@ void Camera::bluePortal()
 {
     portalPlane1 = backRef;
     portalPos1 = pos - back * distToPortal;
-    portalSize1 = 30.; // TODO : Tween size for portal spawn
+    portalSize1 = 50.; // TODO : Tween size for portal spawn
     bluePortalPressed = false;
     portalBase1[0] = leftRef, portalBase1[1] = normal, portalBase1[2] = backRef;
 }
@@ -272,7 +272,7 @@ void Camera::redPortal()
 {
     portalPlane2 = backRef; // TODO : back instead of backref and view matrix instead of planetBasis
     portalPos2 = pos - back * distToPortal;
-    portalSize2 = 30.; // TODO : Tween size for portal spawn
+    portalSize2 = 50.; // TODO : Tween size for portal spawn
     redPortalPressed = false;
     portalBase2[0] = leftRef, portalBase2[1] = normal, portalBase2[2] = backRef;
 }
