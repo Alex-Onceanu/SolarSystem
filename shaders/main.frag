@@ -84,7 +84,9 @@ float rayCircle(vec3 rayPos, vec3 rayDir, vec3 cPos, vec3 cPlane, float radius)
     if(abs(dot(rayDir, cPlane)) <= 1e-6 || radius < 0.) return 1e6;
 
     float t = (dot(cPos, cPlane) - dot(rayPos, cPlane)) / dot(rayDir, cPlane);
-    if(length(rayPos + t * rayDir - cPos) > radius) return 1e6;
+    vec3 p = rayPos + t * rayDir - cPos;
+    p.y *= 0.75;
+    if(length(p) > radius) return 1e6;
 
     return t;
 }
@@ -226,9 +228,8 @@ vec3 waveNormal(vec3 gwhere)
 
 // _____________________________________________________ PLANET ________________________________________________________
 
-vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater, out float tOut)
+vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater, float lod, out float tOut)
 {
-    float lod = 50. + 650. * (1. - smoothstep(10000., 30000., length(rayPos - cameraPos)));
     float nb_iterations = underwater ? lod / 7. : lod;
     float maxt = tPlanety;
     float dt = max(0.025, maxt / nb_iterations);
@@ -256,9 +257,9 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
 
 
 // .w of return value is positive if there is a reflection
-vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety, out float refl, out float tOut)
+vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety, float lod, out float refl, out float tOut)
 {
-    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety, false, tOut);
+    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety, false, lod, tOut);
     float n = mtn.w / mountainAmplitude;
 
     if(n < -0.01) return vec3(-1.);
@@ -281,7 +282,7 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
         float refrCoef = abs(dot(normalize(refracted), sphereNormal));
 
         float tmpT = 0.;
-        mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true, tmpT);
+        mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true, lod, tmpT);
         clr = mix(clr, vec3(195.,146.,79.) / 255., waterColor.a);
 
         shouldReflect = 1. - pow(refrCoef, fresnel);
@@ -376,7 +377,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 {   
     vec3 mapColor = vec3(0.);
     vec3 r0 = rayPos, rd = rayDir;
-    int NB_MAX_REFLECTIONS = 5;
+    int NB_MAX_REFLECTIONS = 10;
     float reflectionCoef = 1., nextReflectionCoef = 1.;
     float lastPortal = 0.; // < -1 when blue, > 1 when red
     // no recursivity in GLSL (so we have to use loops for reflection... until I code my own shader language (in some IGR class I hope))
@@ -389,13 +390,16 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         float tToPlanet = 1e5;
         vec3 argmin = background(rd);
 
+        // planets @here
         vec2 tPlanet = raySphere(r0, rd, planetPos, uPlanetRadius + mountainAmplitude);
         float tstart = max(0., tPlanet.x);
         if(tPlanet.y > tPlanet.x && tstart < tMin && tPlanet.y >= 0.)
         {
             float tOut = 0.;
+            float lod = 100. + 600. * (1. - smoothstep(10000., 30000., length(rayPos - cameraPos)));
+            lod = (lod / (r + 1.)); // reduce level of detail when looking through recursive portals
             vec3 mountainColor = shadePlanet(rd, r0 + tstart * rd, planetPos, 
-                                            uPlanetRadius, sunPos, tPlanet.y - tstart, nextReflectionCoef, tOut);
+                                            uPlanetRadius, sunPos, tPlanet.y - tstart, lod, nextReflectionCoef, tOut);
 
             if(mountainColor.x >= -0.1)
             {
@@ -411,16 +415,15 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
-        // if(tMin >= 1e5 - 0.1)
+        // atmosphere @here
+        vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
+        float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
+        if(dstThroughAtmosphere > 0.)
         {
-            vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
-            float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
-            if(dstThroughAtmosphere > 0.)
-            {
-                argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, uPlanetRadius, sunPos, argmin);
-            }
+            argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, planetPos, uPlanetRadius, sunPos, argmin);
         }
 
+        // sun @here
         vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + sunRadius);
         if(corona.y > corona.x && corona.x < tMin && corona.y >= 0.)
         {
@@ -438,6 +441,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
+        // portals @here
         vec3 nextr0 = r0;
         vec3 nextrd = rd;
         float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
@@ -446,13 +450,19 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             nextr0 = portalBasis2 * transpose(portalBasis1) * (r0 + tPortal1 * rd - portalPos1) + portalPos2;
             nextrd = portalBasis2 * transpose(portalBasis1) * rd;
             nextr0 += nextrd * 0.0001;
-            argmin = vec3(0., 0., 1.);
+
+            vec3 locp = r0 + tPortal1 * rd - portalPos1;
+            locp.y *= 0.75;
+            float contour = smoothstep(0.9, 0.95, length(locp) / portalSize1);
+            argmin = mix(argmin, vec3(0., 0., 1.), contour);
+            // reflectionCoef *= contour;
+
             tMin = tPortal1;
             lastPortal = -10.;
             if(r < NB_MAX_REFLECTIONS - 1 && portalSize2 >= 0.)
             {
                 nextReflectionCoef = 1.;
-                reflectionCoef = 0.;
+                reflectionCoef = contour;
                 shouldTeleport = true;
                 shouldReflect = false;
             }
@@ -463,20 +473,25 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             nextr0 = portalBasis1 * transpose(portalBasis2) * (r0 + tPortal2 * rd - portalPos2) + portalPos1;
             nextrd = portalBasis1 * transpose(portalBasis2) * rd;
             nextr0 += nextrd * 0.0001;
-            argmin = vec3(1., 0., 0.);
+
+            vec3 locp = r0 + tPortal2 * rd - portalPos2;
+            locp.y *= 0.75;
+            float contour = smoothstep(0.9, 0.95, length(locp) / portalSize2);
+            argmin = mix(argmin, vec3(1., 0., 0.), contour);
+            // reflectionCoef *= contour;
+
             tMin = tPortal2;
             lastPortal = 10.;
             if(r < NB_MAX_REFLECTIONS - 1 && portalSize1 >= 0.)
             {
                 nextReflectionCoef = 1.;
-                reflectionCoef = 0.;
+                reflectionCoef = contour;
                 shouldTeleport = true;
                 shouldReflect = false;
             }
         }
-        
 
-        mapColor += argmin * reflectionCoef;
+        mapColor += argmin * reflectionCoef; // <----- main render
 
         if(shouldReflect)
         {

@@ -102,7 +102,7 @@ private:
     int lastRewindingTick = 0;
     vec3 rewindingStart{};
 
-    const float distToPortal = 200.;
+    const float distToPortal = 150.;
     vec3 portalPlane1{}, portalPlane2{};
     vec3 portalPos1{}, portalPos2{};
     float portalSize1 = -1., portalSize2 = -1.;
