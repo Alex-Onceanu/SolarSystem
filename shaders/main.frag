@@ -376,14 +376,14 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 {   
     vec3 mapColor = vec3(0.);
     vec3 r0 = rayPos, rd = rayDir;
-    int NB_MAX_REFLECTIONS = 5;
+    int NB_MAX_REFLECTIONS = 3;
+    int portalParity = -1;
     float reflectionCoef = 1., nextReflectionCoef = 1.;
-    float lastPortal = 0.; // < -1 when blue, > 1 when red
     // no recursivity in GLSL (so we have to use loops for reflection... until I code my own shader language (in some IGR class I hope))
     for(int r = 0; r < NB_MAX_REFLECTIONS; r++)
     {
         const int NB_PLANETS = 1;
-        bool shouldReflect = false, shouldTeleport = false;
+        bool shouldReflect = false;
 
         float tMin = 1e5;
         float tToPlanet = 1e5;
@@ -438,44 +438,42 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
-        vec3 nextr0 = r0;
-        vec3 nextrd = rd;
+        bool shouldTeleport = false;
         float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
-        if(tPortal1 <= tMin && tPortal1 >= 0. && r == 0)
-        {
-            nextr0 = portalBasis2 * transpose(portalBasis1) * (r0 - portalPos1) + portalPos2;
-            nextrd = portalBasis2 * transpose(portalBasis1) * rd;
-            argmin = vec3(0., 0., 1.);
-            tMin = tPortal1;
-            lastPortal = -10.;
-            if(r < NB_MAX_REFLECTIONS - 1 && portalSize2 >= 0.)
-            {
-                nextReflectionCoef = 1.;
-                reflectionCoef = 0.;
-                shouldTeleport = true;
-                shouldReflect = false;
-            }
-        }
         float tPortal2 = rayCircle(r0, rd, portalPos2, portalPlane2, portalSize2);
-        if(tPortal2 <= tMin && tPortal2 >= 0. && r == 0)
+        // if(portalParity >= 0 && r % 2 != 1) tPortal1 = 1e6;
+        // if(portalParity >= 0 && r % 2 != 0) tPortal2 = 1e6;
+        if(tPortal1 <= tMin && tPortal1 >= 0.)
         {
-            nextr0 = portalBasis1 * transpose(portalBasis2) * (r0 - portalPos2) + portalPos1;
-            nextrd = portalBasis1 * transpose(portalBasis2) * rd;
-            argmin = vec3(1., 0., 0.);
-            tMin = tPortal2;
-            lastPortal = 10.;
-            if(r < NB_MAX_REFLECTIONS - 1 && portalSize1 >= 0.)
+            r0 = portalBasis2 * transpose(portalBasis1) * (r0 - portalPos1) + portalPos2;
+            rd = portalBasis2 * transpose(portalBasis1) * rd;
+            tMin = tPortal1;
+            if(r >= NB_MAX_REFLECTIONS - 1 || portalSize2 < 0.)
             {
-                nextReflectionCoef = 1.;
-                reflectionCoef = 0.;
+                // argmin = vec3(0., 0., 1.);
+            }
+            else
+            {
                 shouldTeleport = true;
-                shouldReflect = false;
             }
         }
-        
-
+        if(tPortal2 <= tMin && tPortal2 >= 0. && (portalParity < 0 || r % 2 == 0))
+        {
+            r0 = portalBasis1 * transpose(portalBasis2) * (r0 - portalPos2) + portalPos1;
+            rd = portalBasis1 * transpose(portalBasis2) * rd;
+            tMin = tPortal2;
+            if(r >= NB_MAX_REFLECTIONS - 1 || portalSize1 < 0.)
+            {
+                // argmin = vec3(1., 0., 0.);
+                shouldTeleport = false;
+            }
+            else
+            {
+                shouldTeleport = true;
+            }
+        }
+        if(shouldTeleport) continue;
         mapColor += argmin * reflectionCoef;
-
         if(shouldReflect)
         {
             reflectionCoef = nextReflectionCoef;
@@ -483,12 +481,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             float dstToWater = raySphere(r0, rd, planetPos, uPlanetRadius + seaLevel * mountainAmplitude).x;
             r0 = r0 + dstToWater * rd;
             rd = reflect(rd, waveNormal(normalize(r0 - planetPos)));
-        }
-        else if(shouldTeleport)
-        {
-            reflectionCoef = nextReflectionCoef;
-            r0 = nextr0;
-            rd = nextrd;
         }
         else
             break;
