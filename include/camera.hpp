@@ -63,7 +63,7 @@ private:
     void updatePlanetBasis(const PlanetData& closest);
     float heightHere(const PlanetData& pl) const;
     float noise(const vec3& uvw) const;
-    void teleportThroughPortal();
+    void teleportThroughPortal(const PlanetData& closest);
     bool wentThroughPortal(const vec3& plane, const vec3& center, const float& size) const;
     void bluePortal();
     void redPortal();
@@ -101,10 +101,14 @@ private:
     vec3 rewindingStart{};
 
     const float distToPortal = 180.;
+    const float portalSizeRef = 50.;
+    const float portalAnimTime = 0.5;
     vec3 portalPlane1{}, portalPlane2{};
     vec3 portalPos1{}, portalPos2{};
     float portalSize1 = -1., portalSize2 = -1.;
     mat3 portalBasis1{}, portalBasis2{};
+    int portalCooldown = 0;
+    float tPortalAnim1{}, tPortalAnim2{};
 };
 
 #endif // CAMERA_H

@@ -446,7 +446,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         vec3 nextr0 = r0;
         vec3 nextrd = rd;
         float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
-        if(tPortal1 <= tMin && (tPortal1 >= 0 || (r == 0 && tPortal1 >= -3.8)))
+        if(tPortal1 <= tMin && (tPortal1 >= 0 || (r == 0 && tPortal1 >= -3.9)))
         {
             nextr0 = portalBasis2 * transpose(portalBasis1) * (r0 + tPortal1 * rd - portalPos1) + portalPos2;
             nextrd = portalBasis2 * transpose(portalBasis1) * rd;
@@ -468,7 +468,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
         float tPortal2 = rayCircle(r0, rd, portalPos2, portalPlane2, portalSize2);
-        if(tPortal2 <= tMin && (tPortal2 >= 0 || (r == 0 && tPortal2 >= -3.8)))
+        if(tPortal2 <= tMin && (tPortal2 >= 0 || (r == 0 && tPortal2 >= -3.9)))
         {
             nextr0 = portalBasis1 * transpose(portalBasis2) * (r0 + tPortal2 * rd - portalPos2) + portalPos1;
             nextrd = portalBasis1 * transpose(portalBasis2) * rd;

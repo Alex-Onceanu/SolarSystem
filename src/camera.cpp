@@ -163,7 +163,7 @@ void Camera::walk(const float dt, const PlanetData& closest)
     up = back.cross(left);
 
     // change of basis
-    back = vec3(back.dot(vec3(-leftRef.x, normal.x, backRef.x)), back.dot(vec3(-leftRef.y, normal.y, backRef.y)), back.dot(vec3(-leftRef.z, normal.z, backRef.z)));
+    back  = vec3(back.dot(vec3(-leftRef.x, normal.x, backRef.x)),   back.dot(vec3(-leftRef.y, normal.y, backRef.y)),  back.dot(vec3(-leftRef.z, normal.z, backRef.z)));
     left  = vec3( left.dot(vec3(-leftRef.x, normal.x, backRef.x)),  left.dot(vec3(-leftRef.y, normal.y, backRef.y)),  left.dot(vec3(-leftRef.z, normal.z, backRef.z)));
     up    = vec3(   up.dot(vec3(-leftRef.x, normal.x, backRef.x)),    up.dot(vec3(-leftRef.y, normal.y, backRef.y)),    up.dot(vec3(-leftRef.z, normal.z, backRef.z)));
 
@@ -263,16 +263,18 @@ void Camera::bluePortal()
 {
     portalPlane1 = back;
     portalPos1 = pos - back * distToPortal;
-    portalSize1 = 60.; // TODO : Tween size for portal spawn
+    portalSize1 = 0.0001;
+    tPortalAnim1 = 0.0001;
     bluePortalPressed = false;
     portalBasis1.C1 = left * -1., portalBasis1.C2 = up, portalBasis1.C3 = back;
 }
 
 void Camera::redPortal()
 {
-    portalPlane2 = back; // TODO : back instead of backref and view matrix instead of planetBasis
+    portalPlane2 = back;
     portalPos2 = pos - back * distToPortal;
-    portalSize2 = 60.; // TODO : Tween size for portal spawn
+    portalSize2 = 0.0001;
+    tPortalAnim2 = 0.0001;
     redPortalPressed = false;
     portalBasis2.C1 = left * -1., portalBasis2.C2 = up, portalBasis2.C3 = back;
 }
@@ -295,20 +297,25 @@ bool Camera::wentThroughPortal(const vec3& plane, const vec3& center, const floa
     return rayCircle(oldPos, rd, center, plane, size) < (1e6 - 1.);
 }
 
-void Camera::teleportThroughPortal()
+void Camera::teleportThroughPortal(const PlanetData& closest)
 {
     if(portalSize1 < 0. or portalSize2 < 0.) return;
-    if(wentThroughPortal(portalPlane1, portalPos1, portalSize1))
+    vec3 rd = (pos - oldPos).normalize();
+    if(wentThroughPortal(portalPlane1, portalPos1, portalSize1) and portalCooldown <= 0)
     {
         pos = portalBasis2 * portalBasis1.transpose() * (pos - portalPos1) + portalPos2;
         dashSpeed = portalBasis2 * portalBasis1.transpose() * dashSpeed;
         gravitySpeed = portalBasis2 * portalBasis1.transpose() * gravitySpeed;
+        backRef = portalBasis2 * portalBasis1.transpose() * backRef;
+        portalCooldown = 20;
     }
-    else if(wentThroughPortal(portalPlane2, portalPos2, portalSize2))
+    if(wentThroughPortal(portalPlane2, portalPos2, portalSize2) and portalCooldown <= 0)
     {
         pos = portalBasis1 * portalBasis2.transpose() * (pos - portalPos2) + portalPos1;
         dashSpeed = portalBasis1 * portalBasis2.transpose() * dashSpeed;
         gravitySpeed = portalBasis1 * portalBasis2.transpose() * gravitySpeed;
+        backRef = portalBasis2 * portalBasis1.transpose() * backRef;
+        portalCooldown = 20;
     }
 }
 
@@ -355,22 +362,34 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         lastTimelineTick = tick;
     }
 
-    updatePlanetBasis(closest);
     applyGravity(dt, planets);
+
+    if(portalCooldown > 0) portalCooldown--;
+    if(portalSize1 > 0. and tPortalAnim1 < 1.)
+    {
+        tPortalAnim1 = CLAMP(tPortalAnim1 + dt / portalAnimTime, 0.f, 1.f);
+        portalSize1 = powf(tPortalAnim1, 1. / 4.) * portalSizeRef;
+    }
+    if(portalSize2 > 0. and tPortalAnim2 < 1.)
+    {
+        tPortalAnim2 = CLAMP(tPortalAnim2 + dt / portalAnimTime, 0.f, 1.f);
+        portalSize2 = powf(tPortalAnim2, 1. / 4.) * portalSizeRef;
+    }
+
     // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
     if(not rewinding)
     {
         if(bluePortalPressed) bluePortal();
         if(redPortalPressed) redPortal();
 
-        teleportThroughPortal();
-        updatePlanetBasis(closest);
-
+        teleportThroughPortal(closest);
+        oldPos = pos;
         walk(dt, closest);
         if(isKeyPressed[5] and onGround) jump(dt);
     }
+    else oldPos = pos;
+    updatePlanetBasis(closest);
 
-    oldPos = pos;
     pos += dashSpeed * dt; // position is integral of speed
     pos += gravitySpeed * dt;
 }
