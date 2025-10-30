@@ -35,13 +35,8 @@ public:
         pportalPos1 = portalPos1; pportalPos2 = portalPos2;
         pportalSize1 = portalSize1; pportalSize2 = portalSize2;
 
-        pb1[0] =-portalBase1[0].x;    pb1[3] = portalBase1[1].x;   pb1[6] = portalBase1[2].x; 
-        pb1[1] =-portalBase1[0].y;    pb1[4] = portalBase1[1].y;   pb1[7] = portalBase1[2].y;
-        pb1[2] =-portalBase1[0].z;    pb1[5] = portalBase1[1].z;   pb1[8] = portalBase1[2].z;
-
-        pb2[0] =-portalBase2[0].x;    pb2[3] = portalBase2[1].x;   pb2[6] = portalBase2[2].x; 
-        pb2[1] =-portalBase2[0].y;    pb2[4] = portalBase2[1].y;   pb2[7] = portalBase2[2].y; 
-        pb2[2] =-portalBase2[0].z;    pb2[5] = portalBase2[1].z;   pb2[8] = portalBase2[2].z;
+        portalBasis1.coefs(pb1);
+        portalBasis2.coefs(pb2);
     }
 
 
@@ -68,6 +63,8 @@ private:
     void updatePlanetBasis(const PlanetData& closest);
     float heightHere(const PlanetData& pl) const;
     float noise(const vec3& uvw) const;
+    void teleportThroughPortal();
+    bool wentThroughPortal(const vec3& plane, const vec3& center, const float& size) const;
     void bluePortal();
     void redPortal();
 
@@ -76,6 +73,7 @@ private:
 
     float time{};
     vec3 pos{};
+    vec3 oldPos{};
     vec3 dashSpeed{};
     vec3 gravitySpeed{};
 
@@ -102,11 +100,11 @@ private:
     int lastRewindingTick = 0;
     vec3 rewindingStart{};
 
-    const float distToPortal = 150.;
+    const float distToPortal = 180.;
     vec3 portalPlane1{}, portalPlane2{};
     vec3 portalPos1{}, portalPos2{};
     float portalSize1 = -1., portalSize2 = -1.;
-    vec3 portalBase1[3]{}, portalBase2[3]{};
+    mat3 portalBasis1{}, portalBasis2{};
 };
 
 #endif // CAMERA_H

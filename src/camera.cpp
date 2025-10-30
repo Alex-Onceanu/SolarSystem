@@ -263,18 +263,53 @@ void Camera::bluePortal()
 {
     portalPlane1 = backRef;
     portalPos1 = pos - back * distToPortal;
-    portalSize1 = 30.; // TODO : Tween size for portal spawn
+    portalSize1 = 60.; // TODO : Tween size for portal spawn
     bluePortalPressed = false;
-    portalBase1[0] = leftRef, portalBase1[1] = normal, portalBase1[2] = backRef;
+    portalBasis1.C1 = leftRef * -1., portalBasis1.C2 = normal, portalBasis1.C3 = backRef;
 }
 
 void Camera::redPortal()
 {
     portalPlane2 = backRef; // TODO : back instead of backref and view matrix instead of planetBasis
     portalPos2 = pos - back * distToPortal;
-    portalSize2 = 30.; // TODO : Tween size for portal spawn
+    portalSize2 = 60.; // TODO : Tween size for portal spawn
     redPortalPressed = false;
-    portalBase2[0] = leftRef, portalBase2[1] = normal, portalBase2[2] = backRef;
+    portalBasis2.C1 = leftRef * -1., portalBasis2.C2 = normal, portalBasis2.C3 = backRef;
+}
+
+// same function is used for rendering the portals (see main.frag)
+// returns 1e6 if no intersection
+float rayCircle(vec3 rayPos, vec3 rayDir, vec3 cPos, vec3 cPlane, float radius)
+{
+    if((fabsf(rayDir.dot(cPlane)) <= 0.00001f) || radius < 0.) return 1e6;
+    float t = (cPos.dot(cPlane) - rayPos.dot(cPlane)) / rayDir.dot(cPlane);
+    vec3 p = rayPos + rayDir * t - cPos;
+    if(p.length() > radius + 4.) return 1e6;
+    return t;
+}
+
+bool Camera::wentThroughPortal(const vec3& plane, const vec3& center, const float& size) const
+{
+    if((plane.dot(oldPos - center) >= 0.) == (plane.dot(pos - center) >= 0.)) return false;
+    vec3 rd = (pos - oldPos).normalize();
+    return rayCircle(oldPos, rd, center, plane, size) < (1e6 - 1.);
+}
+
+void Camera::teleportThroughPortal()
+{
+    if(portalSize1 < 0. or portalSize2 < 0.) return;
+    if(wentThroughPortal(portalPlane1, portalPos1, portalSize1))
+    {
+        pos = portalBasis2 * portalBasis1.transpose() * (pos - portalPos1) + portalPos2;
+        dashSpeed = portalBasis2 * portalBasis1.transpose() * dashSpeed;
+        gravitySpeed = portalBasis2 * portalBasis1.transpose() * gravitySpeed;
+    }
+    else if(wentThroughPortal(portalPlane2, portalPos2, portalSize2))
+    {
+        pos = portalBasis1 * portalBasis2.transpose() * (pos - portalPos2) + portalPos1;
+        dashSpeed = portalBasis1 * portalBasis2.transpose() * dashSpeed;
+        gravitySpeed = portalBasis1 * portalBasis2.transpose() * gravitySpeed;
+    }
 }
 
 void Camera::update(float& dt, const float& __time, const std::vector<PlanetData>& planets)
@@ -309,7 +344,7 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         dt *= std::max(0.1f, getBulletTimer() * getBulletTimer());
     }
 
-    auto tick = static_cast<unsigned int>(10. * time); // floor
+    auto tick = static_cast<unsigned int>(10. * time); // tick is floor(time) (10 ticks per second)
     if(tick != lastTimelineTick and not rewinding)
     {
         const size_t MAX_NB_TICKS = 10000;
@@ -321,7 +356,6 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     }
 
     applyGravity(dt, planets);
-    updatePlanetBasis(closest);
     // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
     if(not rewinding)
     {
@@ -330,8 +364,12 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
 
         walk(dt, closest);
         if(isKeyPressed[5] and onGround) jump(dt);
-    }
 
+        teleportThroughPortal();
+    }
+    updatePlanetBasis(closest);
+
+    oldPos = pos;
     pos += dashSpeed * dt; // position is integral of speed
     pos += gravitySpeed * dt;
 }

@@ -85,7 +85,7 @@ float rayCircle(vec3 rayPos, vec3 rayDir, vec3 cPos, vec3 cPlane, float radius)
 
     float t = (dot(cPos, cPlane) - dot(rayPos, cPlane)) / dot(rayDir, cPlane);
     vec3 p = rayPos + t * rayDir - cPos;
-    p.y *= 0.75;
+    // p.y *= 0.75;
     if(length(p) > radius) return 1e6;
 
     return t;
@@ -377,7 +377,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 {   
     vec3 mapColor = vec3(0.);
     vec3 r0 = rayPos, rd = rayDir;
-    int NB_MAX_REFLECTIONS = 10;
+    int NB_MAX_REFLECTIONS = 18;
     float reflectionCoef = 1., nextReflectionCoef = 1.;
     float lastPortal = 0.; // < -1 when blue, > 1 when red
     // no recursivity in GLSL (so we have to use loops for reflection... until I code my own shader language (in some IGR class I hope))
@@ -442,20 +442,20 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         }
 
         // portals @here
+        // TODO : move this in a separate function
         vec3 nextr0 = r0;
         vec3 nextrd = rd;
         float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
-        if(tPortal1 <= tMin && tPortal1 >= 0.)
+        if(tPortal1 <= tMin && (tPortal1 >= 0 || (r == 0 && tPortal1 >= -3.8)))
         {
             nextr0 = portalBasis2 * transpose(portalBasis1) * (r0 + tPortal1 * rd - portalPos1) + portalPos2;
             nextrd = portalBasis2 * transpose(portalBasis1) * rd;
-            nextr0 += nextrd * 0.0001;
+            nextr0 += nextrd * 0.001;
 
             vec3 locp = r0 + tPortal1 * rd - portalPos1;
-            locp.y *= 0.75;
+            // locp.y *= 0.75;
             float contour = smoothstep(0.9, 0.95, length(locp) / portalSize1);
             argmin = mix(argmin, vec3(0., 0., 1.), contour);
-            // reflectionCoef *= contour;
 
             tMin = tPortal1;
             lastPortal = -10.;
@@ -468,17 +468,16 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
         float tPortal2 = rayCircle(r0, rd, portalPos2, portalPlane2, portalSize2);
-        if(tPortal2 <= tMin && tPortal2 >= 0.)
+        if(tPortal2 <= tMin && (tPortal2 >= 0 || (r == 0 && tPortal2 >= -3.8)))
         {
             nextr0 = portalBasis1 * transpose(portalBasis2) * (r0 + tPortal2 * rd - portalPos2) + portalPos1;
             nextrd = portalBasis1 * transpose(portalBasis2) * rd;
-            nextr0 += nextrd * 0.0001;
+            nextr0 += nextrd * 0.001;
 
             vec3 locp = r0 + tPortal2 * rd - portalPos2;
-            locp.y *= 0.75;
+            // locp.y *= 0.75;
             float contour = smoothstep(0.9, 0.95, length(locp) / portalSize2);
             argmin = mix(argmin, vec3(1., 0., 0.), contour);
-            // reflectionCoef *= contour;
 
             tMin = tPortal2;
             lastPortal = 10.;

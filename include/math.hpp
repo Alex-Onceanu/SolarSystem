@@ -97,7 +97,29 @@ struct vec4 {
     static vec4 fract(const vec4& p) { return vec4(p.x - (float)(int)p.x + (p.x < 0. ? 1. : 0.), p.y - (float)(int)p.y + (p.y < 0. ? 1. : 0.), p.z - (float)(int)p.z + (p.z < 0. ? 1. : 0.), p.w - (float)(int)p.w + (p.w < 0. ? 1. : 0.)); }
 };
 
+struct mat3 {
+    vec3 C1, C2, C3;
 
+    mat3() : C1(vec3()), C2(vec3()), C3(vec3()) {}
+    mat3(vec3 m[3]) { C1 = m[0]; C2 = m[1]; C3 = m[2]; }
+    mat3(const vec3& c1, const vec3& c2, const vec3& c3) : C1(c1), C2(c2), C3(c3) {}
+
+    mat3 transpose() const { return mat3(vec3(C1.x, C2.x, C3.x), vec3(C1.y, C2.y, C3.y), vec3(C1.z, C2.z, C3.z)); }
+    vec3 operator*(const vec3& v) const { return vec3(v.dot(vec3(C1.x, C2.x, C3.x)), v.dot(vec3(C1.y, C2.y, C3.y)), v.dot(vec3(C1.z, C2.z, C3.z))); }
+    mat3 operator*(const mat3& o) const
+    {
+        mat3 T = transpose();
+        return mat3(vec3(T.C1.dot(o.C1), T.C1.dot(o.C2), T.C1.dot(o.C3)), 
+                    vec3(T.C2.dot(o.C1), T.C2.dot(o.C2), T.C2.dot(o.C3)), 
+                    vec3(T.C3.dot(o.C1), T.C3.dot(o.C2), T.C3.dot(o.C3)));
+    }
+
+    void coefs(float* p) const { if(!p) return;
+        p[0] =C1.x;    p[3] = C2.x;   p[6] = C3.x; 
+        p[1] =C1.y;    p[4] = C2.y;   p[7] = C3.y;
+        p[2] =C1.z;    p[5] = C2.z;   p[8] = C3.z;
+    }
+};
 
 
 #endif // MATH_H
