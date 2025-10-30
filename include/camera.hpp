@@ -25,10 +25,26 @@ public:
     vec3 getPos() { return pos; }
     vec2 getAngle() { return theta; }
     void getPlanetBasis(float v[9]) { if(!v) return; 
-        v[0] =-leftRef.x;    v[3] = normal.x;   v[6] = frontRef.x; 
-        v[1] =-leftRef.y;    v[4] = normal.y;   v[7] = frontRef.y; 
-        v[2] =-leftRef.z;    v[5] = normal.z;   v[8] = frontRef.z; }
-    
+        v[0] =-leftRef.x;    v[3] = normal.x;   v[6] = backRef.x; 
+        v[1] =-leftRef.y;    v[4] = normal.y;   v[7] = backRef.y; 
+        v[2] =-leftRef.z;    v[5] = normal.z;   v[8] = backRef.z; }
+
+    void getPortalInfo(vec3& pportalPlane1, vec3& pportalPlane2, vec3& pportalPos1, vec3& pportalPos2, float& pportalSize1, float& pportalSize2, float* pb1, float* pb2) const
+    {
+        pportalPlane1 = portalPlane1; pportalPlane2 = portalPlane2;
+        pportalPos1 = portalPos1; pportalPos2 = portalPos2;
+        pportalSize1 = portalSize1; pportalSize2 = portalSize2;
+
+        pb1[0] =-portalBase1[0].x;    pb1[3] = portalBase1[1].x;   pb1[6] = portalBase1[2].x; 
+        pb1[1] =-portalBase1[0].y;    pb1[4] = portalBase1[1].y;   pb1[7] = portalBase1[2].y;
+        pb1[2] =-portalBase1[0].z;    pb1[5] = portalBase1[1].z;   pb1[8] = portalBase1[2].z;
+
+        pb2[0] =-portalBase2[0].x;    pb2[3] = portalBase2[1].x;   pb2[6] = portalBase2[2].x; 
+        pb2[1] =-portalBase2[0].y;    pb2[4] = portalBase2[1].y;   pb2[7] = portalBase2[2].y; 
+        pb2[2] =-portalBase2[0].z;    pb2[5] = portalBase2[1].z;   pb2[8] = portalBase2[2].z;
+    }
+
+
     void setSpeedRef(const float& v) { speedRef = v; }
     void setJumpStrength(const float& v) { jumpStrength = v; }
     void setMountainParams(const float& mountainAmp, const float& sea) { mountainAmplitude = mountainAmp; seaLevel = sea; }
@@ -52,6 +68,8 @@ private:
     void updatePlanetBasis(const PlanetData& closest);
     float heightHere(const PlanetData& pl) const;
     float noise(const vec3& uvw) const;
+    void bluePortal();
+    void redPortal();
 
 private:
     GLFWwindow* window{};
@@ -67,8 +85,8 @@ private:
 
     float mountainAmplitude{}, seaLevel{};
 
-    vec3 normal = vec3(0., 1., 0.), frontRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
-    vec3 front = frontRef;
+    vec3 normal = vec3(0., 1., 0.), backRef = vec3(0., 0., 1.), leftRef = vec3(-1., 0., 0.);
+    vec3 back = backRef;
     vec2 theta{};
 
     float dashStartTime{};
@@ -83,6 +101,12 @@ private:
     float startedRewinding = 0.;
     int lastRewindingTick = 0;
     vec3 rewindingStart{};
+
+    const float distToPortal = 140.;
+    vec3 portalPlane1{}, portalPlane2{};
+    vec3 portalPos1{}, portalPos2{};
+    float portalSize1 = -1., portalSize2 = -1.;
+    vec3 portalBase1[3]{}, portalBase2[3]{};
 };
 
 #endif // CAMERA_H

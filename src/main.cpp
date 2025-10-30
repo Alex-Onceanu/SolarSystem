@@ -120,6 +120,20 @@ int main()
         camera->getPlanetBasis(lb);
         glUniformMatrix3fv(glGetUniformLocation(program ,"planetBasis"), 1, false, lb);
 
+        vec3 portalPlane1{}, portalPlane2{};
+        vec3 portalPos1{}, portalPos2{};
+        float portalSize1 = -1., portalSize2 = -1.;
+        float pb1[9], pb2[9];
+        camera->getPortalInfo(portalPlane1, portalPlane2, portalPos1, portalPos2, portalSize1, portalSize2, pb1, pb2);
+        glUniform3f(glGetUniformLocation(program ,"portalPlane1"), portalPlane1.x, portalPlane1.y, portalPlane1.z);
+        glUniform3f(glGetUniformLocation(program ,"portalPlane2"), portalPlane2.x, portalPlane2.y, portalPlane2.z);
+        glUniform3f(glGetUniformLocation(program ,"portalPos1"), portalPos1.x, portalPos1.y, portalPos1.z);
+        glUniform3f(glGetUniformLocation(program ,"portalPos2"), portalPos2.x, portalPos2.y, portalPos2.z);
+        glUniform1f(glGetUniformLocation(program ,"portalSize1"), portalSize1);
+        glUniform1f(glGetUniformLocation(program ,"portalSize2"), portalSize2);
+        glUniformMatrix3fv(glGetUniformLocation(program ,"portalBasis1"), 1, false, pb1);
+        glUniformMatrix3fv(glGetUniformLocation(program ,"portalBasis2"), 1, false, pb2);
+
         int W, H;
         glfwGetWindowSize(window, &W, &H);
 

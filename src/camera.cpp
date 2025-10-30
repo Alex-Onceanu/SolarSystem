@@ -6,10 +6,11 @@
 #include <iostream>
 #include <algorithm>
 
-constexpr size_t NB_KEYS = 7;
+constexpr size_t NB_KEYS = 8;
 
 bool isKeyPressed[NB_KEYS];
 bool justClicked = false, justUnclicked = false, rightClicking = false, justRightClicked = false;
+bool bluePortalPressed = false, redPortalPressed = false;
 bool shouldHideCursor = true;
 vec2 mousePos;
 
@@ -103,8 +104,8 @@ void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int acti
 {   
     bool isPressed = action == GLFW_PRESS || action == GLFW_REPEAT;
 
-    int everyKey[NB_KEYS]{ GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, GLFW_KEY_LEFT_ALT, GLFW_KEY_SPACE, GLFW_KEY_LEFT_SHIFT };
-    int altKeys[NB_KEYS] { GLFW_KEY_UP, GLFW_KEY_LEFT, GLFW_KEY_DOWN, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT_ALT, -1, -1 };
+    int everyKey[NB_KEYS]{ GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, GLFW_KEY_LEFT_ALT, GLFW_KEY_SPACE };
+    int altKeys[NB_KEYS] { GLFW_KEY_Z, GLFW_KEY_Q, -1, -1, GLFW_KEY_RIGHT_ALT, -1 };
 
     for(int i = 0; i < NB_KEYS; i++)
     {
@@ -118,6 +119,9 @@ void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int acti
         shouldHideCursor = not shouldHideCursor;
         glfwSetCursorPos(window, 0.0, 0.0);
     }
+
+    bluePortalPressed = (key == GLFW_KEY_E and action == GLFW_PRESS);
+    redPortalPressed = (key == GLFW_KEY_R and action == GLFW_PRESS);
 }
 
 void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
@@ -136,8 +140,8 @@ void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
 void Camera::updatePlanetBasis(const PlanetData& closest)
 {
     normal = (pos - closest.p).normalize();
-    frontRef = (frontRef - normal * frontRef.dot(normal)).normalize();
-    leftRef = normal.cross(frontRef);
+    backRef = (backRef - normal * backRef.dot(normal)).normalize();
+    leftRef = normal.cross(backRef);
 }
 
 void Camera::walk(const float dt, const PlanetData& closest)
@@ -149,25 +153,23 @@ void Camera::walk(const float dt, const PlanetData& closest)
 
     if(isKeyPressed[1]) stepSpeed.x -= 1.0;
     if(isKeyPressed[3]) stepSpeed.x += 1.0;
-    // if(isKeyPressed[5]) stepSpeed.y += 1.0; 
-    // if(isKeyPressed[6]) stepSpeed.y -= 1.0;
 
     stepSpeed.normalized();
     stepSpeed *= speedRef;
 
     // relative to when the normal is (0, 1, 0)
-    front = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
+    back = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
     vec3 left = vec3(cosf(theta.x), 0., sinf(theta.x)) * -1.;
-    vec3 up = front.cross(left);
+    vec3 up = back.cross(left);
 
     // change of basis
-    front = vec3(front.dot(vec3(-leftRef.x, normal.x, frontRef.x)), front.dot(vec3(-leftRef.y, normal.y, frontRef.y)), front.dot(vec3(-leftRef.z, normal.z, frontRef.z)));
-    left  = vec3( left.dot(vec3(-leftRef.x, normal.x, frontRef.x)),  left.dot(vec3(-leftRef.y, normal.y, frontRef.y)),  left.dot(vec3(-leftRef.z, normal.z, frontRef.z)));
-    up    = vec3(   up.dot(vec3(-leftRef.x, normal.x, frontRef.x)),    up.dot(vec3(-leftRef.y, normal.y, frontRef.y)),    up.dot(vec3(-leftRef.z, normal.z, frontRef.z)));
+    back = vec3(back.dot(vec3(-leftRef.x, normal.x, backRef.x)), back.dot(vec3(-leftRef.y, normal.y, backRef.y)), back.dot(vec3(-leftRef.z, normal.z, backRef.z)));
+    left  = vec3( left.dot(vec3(-leftRef.x, normal.x, backRef.x)),  left.dot(vec3(-leftRef.y, normal.y, backRef.y)),  left.dot(vec3(-leftRef.z, normal.z, backRef.z)));
+    up    = vec3(   up.dot(vec3(-leftRef.x, normal.x, backRef.x)),    up.dot(vec3(-leftRef.y, normal.y, backRef.y)),    up.dot(vec3(-leftRef.z, normal.z, backRef.z)));
 
     float dstToCtr = (pos - closest.p).length();
     pos -= (left - normal * normal.dot(left)).normalize() * stepSpeed.x * dt;
-    pos += (front - normal * normal.dot(front)).normalize() * stepSpeed.z * dt;
+    pos += (back - normal * normal.dot(back)).normalize() * stepSpeed.z * dt;
     pos = (pos - closest.p).normalize() * dstToCtr + closest.p;
     pos += up * stepSpeed.y * dt;
 }
@@ -236,7 +238,7 @@ void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planet
             onGround = true;
             gravitySpeed = vec3(); // reset gravity when landing
             pos = (pos - e.p).normalize() * h + e.p;
-            dashSpeed -= normal * normal.dot(dashSpeed); // project speed on normal plane (slide)
+            dashSpeed -= normal * normal.dot(dashSpeed); // project dash speed on normal plane (slide)
             break;
         }
     }
@@ -244,17 +246,35 @@ void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planet
 
 void Camera::jump(const float dt)
 {
-    if(not onGround) return;
     gravitySpeed += normal * (jumpStrength);
 }
 
 void Camera::dash()
 {
-    const float dashStrength = 1330.;
-    vec3 F = front * (-getDashTimer() * dashStrength);
+    const float dashStrength = 1700.;
+    vec3 F = back * (-getDashTimer() * dashStrength);
     dashSpeed = F;
+    gravitySpeed = vec3();
     onGround = false;
     tDash = 0.;
+}
+
+void Camera::bluePortal()
+{
+    portalPlane1 = backRef;
+    portalPos1 = pos - back * distToPortal;
+    portalSize1 = 30.; // TODO : Tween size for portal spawn
+    bluePortalPressed = false;
+    portalBase1[0] = leftRef, portalBase1[1] = normal, portalBase1[2] = backRef;
+}
+
+void Camera::redPortal()
+{
+    portalPlane2 = backRef; // TODO : back instead of backref and view matrix instead of planetBasis
+    portalPos2 = pos - back * distToPortal;
+    portalSize2 = 30.; // TODO : Tween size for portal spawn
+    redPortalPressed = false;
+    portalBase2[0] = leftRef, portalBase2[1] = normal, portalBase2[2] = backRef;
 }
 
 void Camera::update(float& dt, const float& __time, const std::vector<PlanetData>& planets)
@@ -264,20 +284,19 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     PlanetData closest = findClosest(planets);
     if(rewinding and not timeline->empty())
     {
-        // dt *= 0.1;
+        // dt *= -1.;
         dashSpeed = vec3();
         gravitySpeed = vec3();
         float rewindingSince = 10. * (time - startedRewinding);
-        float t = 1. - CLAMP(rewindingSince - static_cast<float>(static_cast<int>(rewindingSince)), 0.f, 1.f); // fract
-        // t = tanh(2. * t - 2.) + 1.;
+        float t = 1. - CLAMP(rewindingSince - static_cast<float>(static_cast<int>(rewindingSince)), 0.f, 1.f); // = fract(rewindingSince)
         vec3 end = timeline->front();
-        pos = rewindingStart * t + end * (1. - t);
-        // std::cout << rewindingStart << ", " << end << std::endl;
+        pos = rewindingStart * t + end * (1. - t); // lerp position between current checkpoint and previous one
         updatePlanetBasis(closest);
 
-        auto tick = static_cast<unsigned int>(rewindingSince); // floor
+        auto tick = static_cast<unsigned int>(rewindingSince); // = floor(rewindingSince)
         if(tick != lastRewindingTick)
         {
+            // next tick : pop the dequeue (next checkpoint)
             rewindingStart = timeline->front();
             pos = rewindingStart;
             timeline->pop_front();
@@ -289,7 +308,6 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         tDash = CLAMP(time - dashStartTime, 0.f, bulletTimeDuration);
         dt *= std::max(0.1f, getBulletTimer() * getBulletTimer());
     }
-
 
     auto tick = static_cast<unsigned int>(10. * time); // floor
     if(tick != lastTimelineTick and not rewinding)
@@ -307,8 +325,11 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
     if(not rewinding)
     {
+        if(bluePortalPressed) bluePortal();
+        if(redPortalPressed) redPortal();
+
         walk(dt, closest);
-        if(isKeyPressed[5]) jump(dt);
+        if(isKeyPressed[5] and onGround) jump(dt);
     }
 
     pos += dashSpeed * dt; // position is integral of speed

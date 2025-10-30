@@ -48,6 +48,10 @@ uniform float starSizeVariation;
 uniform float starVoidThreshold;
 uniform float starFlickering;
 
+uniform vec3 portalPlane1, portalPlane2;
+uniform vec3 portalPos1, portalPos2;
+uniform float portalSize1, portalSize2;
+uniform mat3 portalBasis1, portalBasis2;
 
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
@@ -59,7 +63,7 @@ mat2 rot2D(float theta)
 // see texturegen.cpp for yellow noise generation
 float noise(vec3 d, bool underwater)
 {
-    vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.1416), 0.5 - asin(d.y) / 3.1416);
+    vec2 uv = vec2(0.5 + atan(d.z, d.x) / (2. * 3.14159265), 0.5 - asin(d.y) / 3.14159265);
     float x = texture(opticalDepthTexture, uv).r;
     return max(x, underwater ? 0. : seaLevel);
 }
@@ -72,6 +76,25 @@ vec2 raySphere(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius)
     if(delta < 0.) return vec2(1e5, -1e5);
     return vec2((-2. * dot(p, rayDir) - sqrt(delta)) / (2. * dot(rayDir, rayDir)), 
                 (-2. * dot(p, rayDir) + sqrt(delta)) / (2. * dot(rayDir, rayDir)));
+}
+
+// returns 1e6 if no intersection
+float rayCircle(vec3 rayPos, vec3 rayDir, vec3 cPos, vec3 cPlane, float radius)
+{
+    if(abs(dot(rayDir, cPlane)) <= 1e-6 || radius < 0.) return 1e6;
+
+    float t = (dot(cPos, cPlane) - dot(rayPos, cPlane)) / dot(rayDir, cPlane);
+    if(length(rayPos + t * rayDir - cPos) > radius) return 1e6;
+
+    return t;
+}
+
+vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
+{
+    float t = -dot(rayDir, rayPos - spherePos) / dot(rayDir, rayDir);
+    if(t <= 0.) return vec2(1e5, t);
+    vec3 pos = rayPos + t * rayDir;
+    return vec2(length(pos - spherePos) - radius, t);
 }
 
 // found some nice random values at https://www.shadertoy.com/view/Xt23Ry
@@ -122,14 +145,6 @@ vec2 inverseSF( vec3 p )
 
 // _____________________________________________________ BACKGROUND ______________________________________________________
 
-vec2 raySphereMinDist(vec3 rayPos, vec3 rayDir, vec3 spherePos, float radius)
-{
-    float t = -dot(rayDir, rayPos - spherePos) / dot(rayDir, rayDir);
-    if(t <= 0.) return vec2(1e5, t);
-    vec3 pos = rayPos + t * rayDir;
-    return vec2(length(pos - spherePos) - radius, t);
-}
-
 vec3 background(vec3 d)
 {
     vec3 nd = normalize(d);
@@ -157,33 +172,19 @@ vec3 background(vec3 d)
     return tanh(glow * clr) * border;
 }
 
-// _____________________________________________________ PLANET ________________________________________________________
-
-vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater)
+mat3 changeOfBasis(vec3 target, vec3 up)
 {
-    float nb_iterations = underwater ? 60. : 400.;
-    float maxt = tPlanety;
-    float dt = max(0.025, maxt / nb_iterations);
-    float lh = 0.0;
-    float ly = 0.0;
+    vec3 ntarget = normalize(target);
+    if(abs(ntarget.y) > 0.999)
+        return mat3(1., 0., 0., 0., 1., 0., 0., 0., 1.);
+    float lbd = 1. / sqrt(1. - ntarget.y);
+    vec3 abc = normalize((up - ntarget * ntarget.y) * lbd);
+    vec3 cr = cross(abc, ntarget);
 
-    for(float t = 0.001; t < maxt; t += dt)
-    {
-        vec3 p = rayPos + t * rayDir;
-        float py = length(p - sphPos) - radius;
-        vec3 d = normalize(p - sphPos);
-        // d.xz *= rot2D(0.1 * time);
-        float h = mountainAmplitude * noise(d, underwater);
-        if(py < h)
-        {
-            float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh); // <--- https://iquilezles.org/articles/terrainmarching/
-            return vec4(rayPos + dst * rayDir, h);
-        }
-        lh = h;
-        ly = py;
-    }
-    return vec4(-1.);
+    return mat3(abc, ntarget, cr);
 }
+
+// _____________________________________________________ WATER ________________________________________________________
 
 // sum of 3 propagative waves based on angle and time
 float waveHeight(vec3 gwhere)
@@ -201,18 +202,6 @@ float waveHeight(vec3 gwhere)
                     + A1 * (1. + cos(16. * k1 + 1.2 * time))
                     + A2 * (1. + sin(30. * k2 + 3.4 * time))
                     + A3 * (1. + cos(45. * k3 + 6.0 * time))); 
-}
-
-mat3 changeOfBasis(vec3 target, vec3 up)
-{
-    vec3 ntarget = normalize(target);
-    if(abs(ntarget.y) > 0.999)
-        return mat3(1., 0., 0., 0., 1., 0., 0., 0., 1.);
-    float lbd = 1. / sqrt(1. - ntarget.y);
-    vec3 abc = normalize((up - ntarget * ntarget.y) * lbd);
-    vec3 cr = cross(abc, ntarget);
-
-    return mat3(abc, ntarget, cr);
 }
 
 // derivative of waveHeight
@@ -235,13 +224,44 @@ vec3 waveNormal(vec3 gwhere)
     return planetBasis * normalize(vec3(-gradx, 1., -gradz));
 }
 
-// .w of return value is positive if there is a reflection
-vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety)
+// _____________________________________________________ PLANET ________________________________________________________
+
+vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float tPlanety, bool underwater, out float tOut)
 {
-    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety, false);
+    float lod = 50. + 650. * (1. - smoothstep(10000., 30000., length(rayPos - cameraPos)));
+    float nb_iterations = underwater ? lod / 7. : lod;
+    float maxt = tPlanety;
+    float dt = max(0.025, maxt / nb_iterations);
+    float lh = 0.0;
+    float ly = 0.0;
+
+    for(float t = 0.001; t < maxt; t += dt)
+    {
+        vec3 p = rayPos + t * rayDir;
+        float py = length(p - sphPos) - radius;
+        vec3 d = normalize(p - sphPos);
+        // d.xz *= rot2D(0.1 * time);
+        float h = mountainAmplitude * noise(d, underwater);
+        if(py < h)
+        {
+            float dst = t-dt+dt*(lh-ly)/(py-ly-h+lh); // <--- https://iquilezles.org/articles/terrainmarching/
+            tOut = t;
+            return vec4(rayPos + dst * rayDir, h);
+        }
+        lh = h;
+        ly = py;
+    }
+    return vec4(-1.);
+}
+
+
+// .w of return value is positive if there is a reflection
+vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 lightSource, float tPlanety, out float refl, out float tOut)
+{
+    vec4 mtn = rayCastMountains(pos, rayDir, spherePos, radius, tPlanety, false, tOut);
     float n = mtn.w / mountainAmplitude;
 
-    if(n < 0.) return vec4(-1.);
+    if(n < -0.01) return vec3(-1.);
     vec3 clr;
 
     float shouldReflect = -1.;
@@ -254,12 +274,14 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     {
         clr = waterColor.rgb;
         vec3 wn = normalize(waveNormal(sphereNormal));
+        // clr *= max(0., dot(wn, normalize(lightSource - mtn.xyz))); // TODO : lighting water
 
         vec3 refracted = refract(normalize(rayDir), wn, refractionindex);
         vec2 dstToSeabed = raySphere(mtn.xyz, refracted, spherePos, radius);
         float refrCoef = abs(dot(normalize(refracted), sphereNormal));
 
-        mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true);
+        float tmpT = 0.;
+        mtn = rayCastMountains(mtn.xyz, refracted, spherePos, radius, dstToSeabed.x, true, tmpT);
         clr = mix(clr, vec3(195.,146.,79.) / 255., waterColor.a);
 
         shouldReflect = 1. - pow(refrCoef, fresnel);
@@ -295,7 +317,8 @@ vec4 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     float light = max(0., diffuseCoef * diffuse + sphereDiffuse + penumbraCoef * penumbra);
     vec3 shaded = light * clr + ambientCoef * normalize(vec3(1.) + atmosColor);
 
-    return vec4((shouldReflect < -0.1 ? 1. : (1. - shouldReflect)) * shaded, shouldReflect);
+    refl = shouldReflect;
+    return (shouldReflect < -0.1 ? 1. : (1. - shouldReflect)) * shaded;
 }
 
 // _____________________________________________________ ATMOSPHERE ________________________________________________________
@@ -353,13 +376,14 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 {   
     vec3 mapColor = vec3(0.);
     vec3 r0 = rayPos, rd = rayDir;
-    int NB_MAX_REFLECTIONS = 2;
+    int NB_MAX_REFLECTIONS = 5;
     float reflectionCoef = 1., nextReflectionCoef = 1.;
+    float lastPortal = 0.; // < -1 when blue, > 1 when red
     // no recursivity in GLSL (so we have to use loops for reflection... until I code my own shader language (in some IGR class I hope))
     for(int r = 0; r < NB_MAX_REFLECTIONS; r++)
     {
         const int NB_PLANETS = 1;
-        bool shouldStop = true;
+        bool shouldReflect = false, shouldTeleport = false;
 
         float tMin = 1e5;
         float tToPlanet = 1e5;
@@ -369,21 +393,25 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         float tstart = max(0., tPlanet.x);
         if(tPlanet.y > tPlanet.x && tstart < tMin && tPlanet.y >= 0.)
         {
-            vec4 mountainColor = shadePlanet(rd, r0 + tstart * rd, 
-                            planetPos, uPlanetRadius, sunPos, tPlanet.y - tstart);
+            float tOut = 0.;
+            vec3 mountainColor = shadePlanet(rd, r0 + tstart * rd, planetPos, 
+                                            uPlanetRadius, sunPos, tPlanet.y - tstart, nextReflectionCoef, tOut);
+
             if(mountainColor.x >= -0.1)
             {
-                tMin = tstart; // not sure about that though. what if tstart == 0 ???
+                tMin = tOut + tstart;
                 tToPlanet = tstart;
                 argmin = mountainColor.rgb;
 
-                shouldStop = mountainColor.w < -0.1;
-                nextReflectionCoef = mountainColor.w;
+                shouldReflect = nextReflectionCoef >= -0.1;
+            }
+            else
+            {
+                argmin = background(rd); // this line is cursed, it theoretically does nothing but if you remove it everything breaks
             }
         }
 
-
-        if(tMin >= 1e5 - 0.1)
+        // if(tMin >= 1e5 - 0.1)
         {
             vec2 tAtmos = raySphere(r0, rd, planetPos, uPlanetRadius + atmosRadius);
             float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
@@ -410,16 +438,60 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
+        vec3 nextr0 = r0;
+        vec3 nextrd = rd;
+        float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
+        if(tPortal1 <= tMin && tPortal1 >= 0. && r == 0)
+        {
+            nextr0 = portalBasis2 * transpose(portalBasis1) * (r0 - portalPos1) + portalPos2;
+            nextrd = portalBasis2 * transpose(portalBasis1) * rd;
+            argmin = vec3(0., 0., 1.);
+            tMin = tPortal1;
+            lastPortal = -10.;
+            if(r < NB_MAX_REFLECTIONS - 1 && portalSize2 >= 0.)
+            {
+                nextReflectionCoef = 1.;
+                reflectionCoef = 0.;
+                shouldTeleport = true;
+                shouldReflect = false;
+            }
+        }
+        float tPortal2 = rayCircle(r0, rd, portalPos2, portalPlane2, portalSize2);
+        if(tPortal2 <= tMin && tPortal2 >= 0. && r == 0)
+        {
+            nextr0 = portalBasis1 * transpose(portalBasis2) * (r0 - portalPos2) + portalPos1;
+            nextrd = portalBasis1 * transpose(portalBasis2) * rd;
+            argmin = vec3(1., 0., 0.);
+            tMin = tPortal2;
+            lastPortal = 10.;
+            if(r < NB_MAX_REFLECTIONS - 1 && portalSize1 >= 0.)
+            {
+                nextReflectionCoef = 1.;
+                reflectionCoef = 0.;
+                shouldTeleport = true;
+                shouldReflect = false;
+            }
+        }
+        
+
         mapColor += argmin * reflectionCoef;
 
-        if(!shouldStop)
+        if(shouldReflect)
         {
+            reflectionCoef = nextReflectionCoef;
+
             float dstToWater = raySphere(r0, rd, planetPos, uPlanetRadius + seaLevel * mountainAmplitude).x;
             r0 = r0 + dstToWater * rd;
             rd = reflect(rd, waveNormal(normalize(r0 - planetPos)));
-            reflectionCoef = nextReflectionCoef;
         }
-        else break;
+        else if(shouldTeleport)
+        {
+            reflectionCoef = nextReflectionCoef;
+            r0 = nextr0;
+            rd = nextrd;
+        }
+        else
+            break;
     }
     return mapColor;
 }
