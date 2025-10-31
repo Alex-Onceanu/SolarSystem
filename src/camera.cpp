@@ -65,9 +65,8 @@ float Camera::noise(const vec3& uvw) const
 
 float Camera::heightHere(const PlanetData& pl) const
 {
-    const float playerHeight = 65.;
     float mountainHeight = mountainAmplitude * noise((pos - pl.p).normalize());
-    return pl.radius + playerHeight + mountainHeight;
+    return pl.radius + 65. + mountainHeight;
 }
 
 void Camera::glfwCharCallback(GLFWwindow* window, unsigned int c)
@@ -90,10 +89,6 @@ void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action,
             justRightClicked = true;
 
         rightClicking = (button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS or action == GLFW_REPEAT);   
-    }
-    else
-    {
-
     }
 }
 
@@ -125,7 +120,7 @@ void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
 {
     if(isKeyPressed[4] or not shouldHideCursor)
     {
-
+        // some imgui stuff used to go here
     }
     else 
     {
@@ -227,6 +222,18 @@ PlanetData Camera::findClosest(const std::vector<PlanetData>& planets)
             closest = planets[i];
             iClosest = i;
         }
+
+        // update portalclosest @here
+        if(iPortalClosest1 != -1 and iPortalClosest1 == i)
+        {
+            dposForPortal1 = planets[i].p - oldClosestPosForPortal1;
+            oldClosestPosForPortal1 = planets[i].p;
+        }
+        if(iPortalClosest2 != -1 and iPortalClosest2 == i)
+        {
+            dposForPortal2 = planets[i].p - oldClosestPosForPortal2;
+            oldClosestPosForPortal2 = planets[i].p;
+        }
     }
     return closest;
 }
@@ -270,6 +277,13 @@ void Camera::bluePortal()
     tPortalAnim1 = 0.0001;
     bluePortalPressed = false;
     portalBasis1.C1 = left * -1., portalBasis1.C2 = up, portalBasis1.C3 = back;
+
+    if((pos - oldClosestPos).length() < 650. + closest.radius + closest.mountainAmplitude)
+    {
+        iPortalClosest1 = iClosest;
+        oldClosestPosForPortal1 = oldClosestPos;
+    }
+    else iPortalClosest1 = -1;
 }
 
 void Camera::redPortal()
@@ -280,6 +294,13 @@ void Camera::redPortal()
     tPortalAnim2 = 0.0001;
     redPortalPressed = false;
     portalBasis2.C1 = left * -1., portalBasis2.C2 = up, portalBasis2.C3 = back;
+
+    if((pos - oldClosestPos).length() < 650. + closest.radius + closest.mountainAmplitude)
+    {
+        iPortalClosest2 = iClosest;
+        oldClosestPosForPortal2 = oldClosestPos;
+    }
+    else iPortalClosest2 = -1;
 }
 
 // same function is used for rendering the portals (see main.frag)
@@ -327,7 +348,7 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     time = __time;
     
     int iOldClosest = iClosest;
-    PlanetData closest = findClosest(planets);
+    closest = findClosest(planets);
     mountainAmplitude = closest.mountainAmplitude;
     seaLevel = closest.seaLevel;
     if(iOldClosest != -1)
@@ -339,14 +360,15 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
             updatePlanetBasis(closest);
             theta = vec2(acosf(oldLeft.dot(leftRef)), -asinf(normal.dot(oldBack)));
         }
-        else if((pos - closest.p).length() < 600. + heightHere(closest) and not rewinding)
+        else if((pos - closest.p).length() < 600. + closest.radius + closest.mountainAmplitude + 65. and not rewinding)
         {
             pos += closest.p - oldClosestPos;
-            portalPos1 += closest.p - oldClosestPos;
-            portalPos2 += closest.p - oldClosestPos;
         }
     }
     oldClosestPos = closest.p;
+
+    if(iPortalClosest1 != -1) portalPos1 += dposForPortal1;
+    if(iPortalClosest2 != -1) portalPos2 += dposForPortal2;
 
     updateMouse();
 

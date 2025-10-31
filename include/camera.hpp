@@ -104,7 +104,11 @@ private:
     float tPortalAnim1{}, tPortalAnim2{};
 
     int iClosest = -1;
+    PlanetData closest;
     vec3 oldClosestPos{};
+    int iPortalClosest1 = -1, iPortalClosest2 = -1;
+    vec3 dposForPortal1{}, dposForPortal2{};
+    vec3 oldClosestPosForPortal1{}, oldClosestPosForPortal2{};
 };
 
 #endif // CAMERA_H

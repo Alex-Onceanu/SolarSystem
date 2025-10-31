@@ -244,7 +244,6 @@ vec4 rayCastMountains(vec3 rayPos, vec3 rayDir, vec3 sphPos, float radius, float
         vec3 p = rayPos + t * rayDir;
         float py = length(p - sphPos) - radius;
         vec3 d = normalize(p - sphPos);
-        // d.xz *= rot2D(0.1 * time);
         float h = mountainAmplitude[i] * noise(d, underwater, i);
         if(py < h)
         {
@@ -278,7 +277,7 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     {
         clr = waterColor[i].rgb;
         vec3 wn = normalize(waveNormal(sphereNormal));
-        // clr *= max(0., dot(wn, normalize(lightSource - mtn.xyz))); // TODO : lighting water
+        // clr *= max(0., dot(wn, normalize(lightSource - mtn.xyz))); // TODO : phong for water
 
         vec3 refracted = refract(normalize(rayDir), wn, refractionindex);
         vec2 dstToSeabed = raySphere(mtn.xyz, refracted, spherePos, radius);
@@ -291,7 +290,7 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
         shouldReflect = 1. - pow(refrCoef, fresnel);
     }
     else if(n < seaLevel[i] + 0.05) clr = beachColor[i];
-    // else if(n < 0.75) clr = vec3(90.,139.,93.) / 255.; else clr = vec3(205., 200., 200.) / 255.; // snow
+    // else if(n < 0.75) clr = vec3(90.,139.,93.) / 255.; else clr = vec3(205., 200., 200.) / 255.; // cartoonish snow
     else clr = mix(grassColor[i], peakColor[i], smoothstep(seaLevel[i] + 0.07, 0.85, n));
     
     vec2 eps = vec2(0.06, 0.);
@@ -308,8 +307,6 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
     float h2b = noise(normalize(sample2b - spherePos), n <= seaLevel[i] + 0.0001, i);
     float gradz = (h2 - h2b) / (2. * eps.x);
 
-    // this only works when the normal is aligned with (Oy), so it needs to be rotated
-    // vec3 localNormal = normalize(vec3(-mountainAmplitude * gradx, 1., -mountainAmplitude * gradz));
     vec3 localNormal = normalize(sphereNormal - mountainAmplitude[i] * gradx * normalize(sample1 - sample1b) - mountainAmplitude[i] * gradz * normalize(sample2 - sample2b));
 
     // no grass grows on slope, but it looked kinda ugly
@@ -382,12 +379,12 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
     vec3 r0 = rayPos, rd = rayDir;
     int NB_MAX_REFLECTIONS = 18;
     float reflectionCoef = 1., nextReflectionCoef = 1.;
-    float lastPortal = 0.; // < -1 when blue, > 1 when red
     // no recursivity in GLSL (so we have to use loops for reflection... until I code my own shader language (in some IGR class I hope))
     for(int r = 0; r < NB_MAX_REFLECTIONS; r++)
     {
         bool shouldReflect = false, shouldTeleport = false;
         int iRefl = -1;
+        int iPlanet = -1;
 
         float tMin = 1e5;
         float tToPlanet = 1e5;
@@ -411,6 +408,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
 
                 if(mountainColor.x >= -0.1)
                 {
+                    iPlanet = i;
                     tMin = tOut + tstart;
                     tToPlanet = tstart;
                     argmin = mountainColor.rgb;
@@ -428,8 +426,9 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         for(int i = 0; i < NB_PLANETS; i++)
         {
             // atmosphere @here
+            if(i == iPlanet) continue;
             vec3 ppi = planetPos[i];
-            float pri = uPlanetRadius[i];
+            float pri = uPlanetRadius[i] + seaLevel[i] * mountainAmplitude[i];
             vec2 tAtmos = raySphere(r0, rd, ppi, pri + atmosRadius[i]);
             float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
             if(dstThroughAtmosphere > 0.)
@@ -457,7 +456,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         }
 
         // portals @here
-        // TODO : move this in a separate function
         vec3 nextr0 = r0;
         vec3 nextrd = rd;
         float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
@@ -473,7 +471,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             argmin = mix(argmin, vec3(0., 0., 1.), contour);
 
             tMin = tPortal1;
-            lastPortal = -10.;
             if(r < NB_MAX_REFLECTIONS - 1 && portalSize2 >= 0.)
             {
                 nextReflectionCoef = 1.;
@@ -495,7 +492,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             argmin = mix(argmin, vec3(1., 0., 0.), contour);
 
             tMin = tPortal2;
-            lastPortal = 10.;
             if(r < NB_MAX_REFLECTIONS - 1 && portalSize1 >= 0.)
             {
                 nextReflectionCoef = 1.;
@@ -505,7 +501,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
 
-        mapColor += argmin * reflectionCoef; // <----- main render
+        mapColor += argmin * reflectionCoef; // <----- main render @here
 
         if(shouldReflect)
         {
