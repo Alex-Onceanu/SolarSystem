@@ -11,6 +11,7 @@ set(PROJECT_SOURCES
             ${PROJECT_SOURCE_DIR}/init.c
             ${PROJECT_SOURCE_DIR}/input.cpp
             ${PROJECT_SOURCE_DIR}/camera.cpp
+            ${PROJECT_SOURCE_DIR}/planet.cpp
             dependencies/glad/glad.c
             dependencies/imgui/imgui.cpp
             dependencies/imgui/imgui_widgets.cpp

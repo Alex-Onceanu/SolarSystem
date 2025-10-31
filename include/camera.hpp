@@ -8,13 +8,7 @@
 #include <memory>
 
 #include "math.hpp"
-
-struct PlanetData
-{
-    vec3 p;
-    float radius;
-    float mass;
-};
+#include "planet.hpp"
 
 class Camera
 {
@@ -59,7 +53,7 @@ private:
     void dash();
     void updateMouse();
     PlanetData findClosest(const std::vector<PlanetData>& planets);
-    void applyGravity(const float& dt, const std::vector<PlanetData>& planets);
+    void applyGravity(const float& dt, const PlanetData& closest);
     void updatePlanetBasis(const PlanetData& closest);
     float heightHere(const PlanetData& pl) const;
     float noise(const vec3& uvw) const;

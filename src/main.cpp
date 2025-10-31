@@ -3,12 +3,87 @@
 
 #include <iostream>
 #include <chrono>
+#include <array>
 #include <memory>
 
 #include "init.h"
 #include "input.hpp"
 #include "camera.hpp"
 #include "math.hpp"
+
+constexpr size_t NB_PLANETS = 3; // must be static because of uniform arrays in main.frag
+std::array<std::unique_ptr<Planet>, NB_PLANETS> setupPlanets()
+{
+    std::array<std::unique_ptr<Planet>, NB_PLANETS> res = {
+        std::make_unique<Planet>(vec3(0.,-580.,300.), 700000000., 500.),
+        std::make_unique<Planet>(vec3(400.,1580.,2300.), 800000000., 600.),
+        std::make_unique<Planet>(vec3(-600.,500.,-1300.), 350000000., 250.)
+    };
+    return res;
+}
+
+void setPlanetsUniforms(unsigned int program, std::vector<PlanetData> planets)
+{
+    vec3 planetPos[NB_PLANETS]{};
+    float uPlanetRadius[NB_PLANETS]{};
+    float mountainAmplitude[NB_PLANETS]{};
+    float seaLevel[NB_PLANETS]{};
+    vec4 waterColor[NB_PLANETS]{};
+    float atmosFalloff[NB_PLANETS]{};
+    float atmosRadius[NB_PLANETS]{};
+    vec3 atmosColor[NB_PLANETS]{};
+
+    for(int i = 0; i < NB_PLANETS; i++)
+    {
+        planetPos[i] = planets[i].p;
+        uPlanetRadius[i] = planets[i].radius;
+        mountainAmplitude[i] = planets[i].mountainAmplitude;
+        seaLevel[i] = planets[i].seaLevel;
+        waterColor[i] = planets[i].waterColor;
+        atmosFalloff[i] = planets[i].atmosFalloff;
+        atmosRadius[i] = planets[i].atmosRadius;
+        atmosColor[i] = planets[i].atmosColor;
+    }
+
+    float planetPosLinear[NB_PLANETS * 3];
+    int i = 0; 
+    while(i < NB_PLANETS * 3) 
+    { 
+        planetPosLinear[i] = planetPos[i / 3].x; 
+        planetPosLinear[i + 1] = planetPos[i / 3].y; 
+        planetPosLinear[i + 2] = planetPos[i / 3].z; 
+        i += 3;
+    }
+
+    float waterColorLinear[NB_PLANETS * 4];
+    i = 0; 
+    while(i < NB_PLANETS * 4) 
+    { 
+        waterColorLinear[i] = waterColor[i / 4].x; 
+        waterColorLinear[i + 1] = waterColor[i / 4].y; 
+        waterColorLinear[i + 2] = waterColor[i / 4].z; 
+        waterColorLinear[i + 3] = waterColor[i / 4].w; 
+        i += 4;
+    }
+
+    float atmosColorLinear[NB_PLANETS * 3];
+    i = 0; 
+    while(i < NB_PLANETS * 3) 
+    { 
+        atmosColorLinear[i] = atmosColor[i / 3].x; 
+        atmosColorLinear[i + 1] = atmosColor[i / 3].y; 
+        atmosColorLinear[i + 2] = atmosColor[i / 3].z; 
+        i += 3;
+    }
+    glUniform3fv(glGetUniformLocation(program, "planetPos"), NB_PLANETS, planetPosLinear);
+    glUniform1fv(glGetUniformLocation(program, "uPlanetRadius"), NB_PLANETS, uPlanetRadius);
+    glUniform1fv(glGetUniformLocation(program, "mountainAmplitude"), NB_PLANETS, mountainAmplitude);
+    glUniform1fv(glGetUniformLocation(program, "seaLevel"), NB_PLANETS, seaLevel);
+    glUniform4fv(glGetUniformLocation(program, "waterColor"), NB_PLANETS, waterColorLinear);
+    glUniform1fv(glGetUniformLocation(program, "atmosFalloff"), NB_PLANETS, atmosFalloff);
+    glUniform1fv(glGetUniformLocation(program, "atmosRadius"), NB_PLANETS, atmosRadius);
+    glUniform3fv(glGetUniformLocation(program, "atmosColor"), NB_PLANETS, atmosColorLinear);
+}
 
 int main()
 {
@@ -39,25 +114,26 @@ int main()
     glClear(GL_COLOR_BUFFER_BIT);
     glfwSwapBuffers(window);
 
+    auto planets = setupPlanets();
     float time = 0.;
 
     // mainloop here
     while (!glfwWindowShouldClose(window))
     {
         auto currentTime = std::chrono::high_resolution_clock::now();
-        // realTime will only be used for UI and "real world" durations
+        // realTime will only be used for UI and "real world" durations (such as cooldowns)
         float realTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         float dt = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - prevTime).count();
         prevTime = currentTime;
-        time += dt; // time is sum of dt so that we can rewind time and morph it
+        time += dt; // time is sum of dt so that we can slow time and rewind it
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, earthTexture);
-        glUniform1i(glGetUniformLocation(program, "earthTexture"), 0);
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, earthTexture);
+        // glUniform1i(glGetUniformLocation(program, "earthTexture"), 0);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, opticalDepthTexture);
-        glUniform1i(glGetUniformLocation(program, "opticalDepthTexture"), 1);
+        glUniform1i(glGetUniformLocation(program, "heightmap"), 1);
 
         auto inputData = Input::getInput();
         glUniform1f(glGetUniformLocation(program, "time"), time);
@@ -68,25 +144,22 @@ int main()
             inputData.sunColor[0], inputData.sunColor[1], inputData.sunColor[2]);
         glUniform1f(glGetUniformLocation(program, "sunCoronaStrength"), 
             inputData.sunCoronaStrength);
-        glUniform3f(glGetUniformLocation(program, "planetPos"), 
-            inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]);
-        glUniform1f(glGetUniformLocation(program, "uPlanetRadius"), inputData.planetRadius);
         glUniform1f(glGetUniformLocation(program, "fov"), inputData.fov * 3.1415 / 180.);
 
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_i"), inputData.nb_steps_i);
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_j"), inputData.nb_steps_j);
-        glUniform1f(glGetUniformLocation(program, "atmosRadius"), inputData.atmosRadius);
-        glUniform1f(glGetUniformLocation(program, "atmosFalloff"), inputData.atmosFalloff);
-        glUniform3f(glGetUniformLocation(program, "atmosColor"), 
-            powf(400. / inputData.atmosColor[0], 4) * inputData.atmosScattering, 
-            powf(400. / inputData.atmosColor[1], 4) * inputData.atmosScattering, 
-            powf(400. / inputData.atmosColor[2], 4) * inputData.atmosScattering);
+        // glUniform1f(glGetUniformLocation(program, "atmosRadius"), inputData.atmosRadius);
+        // glUniform1f(glGetUniformLocation(program, "atmosFalloff"), inputData.atmosFalloff);
+        // glUniform3f(glGetUniformLocation(program, "atmosColor"), 
+        //     powf(400. / inputData.atmosColor[0], 4) * inputData.atmosScattering, 
+        //     powf(400. / inputData.atmosColor[1], 4) * inputData.atmosScattering, 
+        //     powf(400. / inputData.atmosColor[2], 4) * inputData.atmosScattering);
 
-        glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
-        glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
+        // glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
+        // glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
 
-        glUniform1f(glGetUniformLocation(program, "seaLevel"), inputData.seaLevel);
-        glUniform4f(glGetUniformLocation(program, "waterColor"), inputData.waterColor[0], inputData.waterColor[1], inputData.waterColor[2], inputData.waterColor[3]);
+        // glUniform1f(glGetUniformLocation(program, "seaLevel"), inputData.seaLevel);
+        // glUniform4f(glGetUniformLocation(program, "waterColor"), inputData.waterColor[0], inputData.waterColor[1], inputData.waterColor[2], inputData.waterColor[3]);
         glUniform1f(glGetUniformLocation(program, "refractionindex"), inputData.refractionindex);
         glUniform1f(glGetUniformLocation(program, "fresnel"), inputData.fresnel);
 
@@ -102,13 +175,16 @@ int main()
         glUniform1f(glGetUniformLocation(program, "starVoidThreshold"), inputData.starVoidThreshold);
         glUniform1f(glGetUniformLocation(program, "starFlickering"), inputData.starFlickering);
 
-        std::vector<PlanetData> pdv{};
-        PlanetData p1 = { .p = vec3(inputData.planetPos[0], inputData.planetPos[1], inputData.planetPos[2]), .radius = inputData.planetRadius, .mass = inputData.planetMass };
-        pdv.push_back(p1);
         camera->setSpeedRef(inputData.cameraSpeed);
         camera->setJumpStrength(inputData.jumpStrength);
         camera->setMountainParams(inputData.mountainAmplitude, inputData.seaLevel);
+        std::vector<PlanetData> pdv;
+        for(const auto& e : planets)
+        {
+            pdv.push_back(e->getInfo());
+        }
         camera->update(dt, realTime, pdv);
+        setPlanetsUniforms(program, pdv);
 
         vec3 camPos = camera->getPos();
         glUniform3f(glGetUniformLocation(program ,"cameraPos"), camPos.x, camPos.y, camPos.z);

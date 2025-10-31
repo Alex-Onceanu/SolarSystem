@@ -224,23 +224,19 @@ PlanetData Camera::findClosest(const std::vector<PlanetData>& planets)
     return closest;
 }
 
-void Camera::applyGravity(const float& dt, const std::vector<PlanetData>& planets)
+void Camera::applyGravity(const float& dt, const PlanetData& closest)
 {
     onGround = false;
-    for(const auto& e : planets)
+    vec3 Fdir = (pos - closest.p).normalize();
+    vec3 F = Fdir * (-closest.mass / (closest.p - pos).dot(closest.p - pos));
+    gravitySpeed += F * dt; // Newton's second law + integrating acceleration
+    float h = heightHere(closest);
+    if((closest.p - pos).length() <= h)
     {
-        vec3 Fdir = (pos - e.p).normalize();
-        vec3 F = Fdir * (-e.mass / (e.p - pos).dot(e.p - pos));
-        gravitySpeed += F * dt; // Newton's second law + integrating acceleration
-        float h = heightHere(e);
-        if((e.p - pos).length() <= h)
-        {
-            onGround = true;
-            gravitySpeed = vec3(); // reset gravity when landing
-            pos = (pos - e.p).normalize() * h + e.p;
-            dashSpeed -= normal * normal.dot(dashSpeed); // project dash speed on normal plane (slide)
-            break;
-        }
+        onGround = true;
+        gravitySpeed = vec3(); // reset gravity when landing
+        pos = (pos - closest.p).normalize() * h + closest.p;
+        dashSpeed -= normal * normal.dot(dashSpeed); // project dash speed on normal plane (slide)
     }
 }
 
@@ -362,7 +358,7 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         lastTimelineTick = tick;
     }
 
-    applyGravity(dt, planets);
+    applyGravity(dt, closest);
 
     if(portalCooldown > 0) portalCooldown--;
     if(portalSize1 > 0. and tPortalAnim1 < 1.)
