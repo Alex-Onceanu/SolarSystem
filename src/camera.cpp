@@ -342,6 +342,8 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         else if((pos - closest.p).length() < 600. + heightHere(closest) and not rewinding)
         {
             pos += closest.p - oldClosestPos;
+            portalPos1 += closest.p - oldClosestPos;
+            portalPos2 += closest.p - oldClosestPos;
         }
     }
     oldClosestPos = closest.p;
