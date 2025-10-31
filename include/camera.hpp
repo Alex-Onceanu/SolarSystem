@@ -33,10 +33,8 @@ public:
         portalBasis2.coefs(pb2);
     }
 
-
     void setSpeedRef(const float& v) { speedRef = v; }
     void setJumpStrength(const float& v) { jumpStrength = v; }
-    void setMountainParams(const float& mountainAmp, const float& sea) { mountainAmplitude = mountainAmp; seaLevel = sea; }
 
     float getDashTimer() { return std::min(dashCharge, tDash) / dashCharge; }
     float getBulletTimer() { return tDash / bulletTimeDuration; }
@@ -48,7 +46,7 @@ public:
     static void glfwCharCallback(GLFWwindow* window, unsigned int c);
 
 private:
-    void walk(const float dt, const PlanetData& closest);
+    void walk(const float dt, const PlanetData& closest, bool ignoreKeys);
     void jump(const float dt);
     void dash();
     void updateMouse();
@@ -64,6 +62,7 @@ private:
 
 private:
     GLFWwindow* window{};
+    bool prevWouldHideCursor = false;
 
     float time{};
     vec3 pos{};
@@ -103,6 +102,9 @@ private:
     mat3 portalBasis1{}, portalBasis2{};
     int portalCooldown = 0;
     float tPortalAnim1{}, tPortalAnim2{};
+
+    int iClosest = -1;
+    vec3 oldClosestPos{};
 };
 
 #endif // CAMERA_H

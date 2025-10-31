@@ -14,14 +14,14 @@
 std::array<std::unique_ptr<Planet>, NB_PLANETS> setupPlanets()
 {
     std::array<std::unique_ptr<Planet>, NB_PLANETS> res = {
-        std::make_unique<Planet>(vec3(-30117, -16470, 16744), 700000000., 500., 64., 0.463, vec4(72., 167., 206., 19.), 8.9, 225., vec3(748., 602., 427.9), vec3(214., 194., 149.), vec3(91., 142., 92.), vec3(205., 215., 195.)),
-        std::make_unique<Planet>(vec3(-9411, 8470, 5581), 810000000., 608., 89., 0.308, vec4(25., 2., 2., 50.), 9.3, 227., vec3(450., 640., 800.), vec3(164., 80., 80.), vec3(140., 36., 36.), vec3(2., 2., 2.)),
-        std::make_unique<Planet>(vec3(17882, 0, 15813), 780000000., 650., 43., 0.098, vec4(97., 131., 146., 2.), 10.5, 292., vec3(475., 536., 800.), vec3(240., 219., 169.), vec3(221., 173., 106.), vec3(242., 165., 55.)),
-        std::make_unique<Planet>(vec3(-25411, -28235, -24186), 800000000., 527., 95., 0.355, vec4(138., 211., 193., 7.), 6.48, 244., vec3(461., 400., 507.), vec3(168., 175., 221.), vec3(64., 15., 100.), vec3(135., 106., 183.)),
-        std::make_unique<Planet>(vec3(28705, -28705, -25116), 950000000., 953., 97., 0.429, vec4(72., 116., 99., 6.), 9.6, 338., vec3(508., 451., 521.), vec3(143., 179., 156.), vec3(159., 211., 158.), vec3(34., 82., 75.)),
-        std::make_unique<Planet>(vec3(40000, 40000, -31627), 990000000., 999., 98., 0.973, vec4(63., 155., 222., 2.), 11.6, 303., vec3(752., 607., 441.), vec3(175., 217., 246.), vec3(95., 161., 173.), vec3(43., 127., 215.)),
-        std::make_unique<Planet>(vec3(4705, 15529, 20465), 600000000., 433., 56., 0.655, vec4(9., 6., 49., 12.), 15.8, 322., vec3(400., 400., 400.), vec3(30.,28.,28.), vec3(17., 18., 29.), vec3(0., 0., 0.)),
-        std::make_unique<Planet>(vec3(0., 0., 0.),                            630000000., 410., 86., 0.3,   vec4(95., 25., 174., 0.), 10., 263., vec3(508., 555., 530.), vec3(102., 70., 134.), vec3(46., 22., 32.), vec3(176., 232., 244.))
+        std::make_unique<Planet>(vec3(-9434.7906, -25662.6391, 2955.8649), 700000000., 500., 64., 0.463, vec4(72., 167., 206., 19.), 8.9, 225., vec3(748., 602., 427.9), vec3(214., 194., 149.), vec3(91., 142., 92.), vec3(205., 215., 195.), 3600., 0.),
+        std::make_unique<Planet>(vec3(879.11278, 3896.616536, -1279.07537), 810000000., 608., 89., 0.308, vec4(25., 2., 2., 50.), 9.3, 227., vec3(450., 640., 800.), vec3(164., 80., 80.), vec3(140., 36., 36.), vec3(2., 2., 2.)               , 3600., 100.),
+        std::make_unique<Planet>(vec3(13411.7725, 1986.762333, 18793.155), 780000000., 650., 43., 0.098, vec4(97., 131., 146., 2.), 10.5, 292., vec3(475., 536., 800.), vec3(240., 219., 169.), vec3(221., 173., 106.), vec3(242., 165., 55.), 2700., 200.),
+        std::make_unique<Planet>(vec3(-27397.563, -27352.0892, -22861.6378), 800000000., 527., 95., 0.355, vec4(138., 211., 193., 7.), 6.48, 244., vec3(461., 400., 507.), vec3(168., 175., 221.), vec3(64., 15., 100.), vec3(135.,106., 183.), 3000., 300.),
+        std::make_unique<Planet>(vec3(-6744.2406, -12949.7822, -1483.17318), 950000000., 953., 97., 0.429, vec4(72., 116., 99., 6.), 9.6, 338., vec3(508., 451., 521.), vec3(143., 179., 156.), vec3(159., 211., 158.), vec3(34., 82., 75.)  , 4500., 400.),
+        std::make_unique<Planet>(vec3(13625.1274, 51722.1683, -14043.7552), 990000000., 999., 98., 0.973, vec4(63., 155., 222., 2.), 11.6, 303., vec3(752., 607., 441.), vec3(175., 217., 246.), vec3(95., 161., 173.), vec3(43., 127., 215.), 4500., 500.),
+        std::make_unique<Planet>(vec3(14351.9012, 11241.1955, 14033.6766), 600000000., 433., 56., 0.655, vec4(9., 6., 49., 12.), 15.8, 322., vec3(400., 400., 400.), vec3(30.,28.,28.), vec3(17., 18., 29.), vec3(0., 0., 0.)                , 2100. ,  600.),
+        std::make_unique<Planet>(vec3(0.0, 0.0, 0.0), 630000000., 410., 86., 0.3,   vec4(95., 25., 174., 0.), 10., 263., vec3(508., 555., 530.), vec3(102., 70., 134.), vec3(46., 22., 32.), vec3(176., 232., 244.)         , 2400. , 700.)
     };
     return res;
 }
@@ -133,11 +133,11 @@ int main()
     unsigned int program = init(&window);
     unsigned int UIprogram = initUI();
 
-    auto earthTexture = init_texture("../assets/eart.ppm");
+    // auto earthTexture = init_texture("../assets/eart.ppm");
     auto opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init(window);
-    auto camera = std::make_unique<Camera>(window, vec3(-30117 - 800., -16470, 16744));
+    auto camera = std::make_unique<Camera>(window, vec3(-9434.7906 - 300, -25662.6391 + 600, 2955.8649));
 
     auto startTime = std::chrono::high_resolution_clock::now();
     auto prevTime = startTime;
@@ -190,18 +190,6 @@ int main()
 
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_i"), inputData.nb_steps_i);
         glUniform1f(glGetUniformLocation(program, "NB_STEPS_j"), inputData.nb_steps_j);
-        // glUniform1f(glGetUniformLocation(program, "atmosRadius"), inputData.atmosRadius);
-        // glUniform1f(glGetUniformLocation(program, "atmosFalloff"), inputData.atmosFalloff);
-        // glUniform3f(glGetUniformLocation(program, "atmosColor"), 
-        //     powf(400. / inputData.atmosColor[0], 4) * inputData.atmosScattering, 
-        //     powf(400. / inputData.atmosColor[1], 4) * inputData.atmosScattering, 
-        //     powf(400. / inputData.atmosColor[2], 4) * inputData.atmosScattering);
-
-        // glUniform1f(glGetUniformLocation(program, "mountainAmplitude"), inputData.mountainAmplitude);
-        // glUniform1f(glGetUniformLocation(program, "mountainFrequency"), inputData.mountainFrequency);
-
-        // glUniform1f(glGetUniformLocation(program, "seaLevel"), inputData.seaLevel);
-        // glUniform4f(glGetUniformLocation(program, "waterColor"), inputData.waterColor[0], inputData.waterColor[1], inputData.waterColor[2], inputData.waterColor[3]);
         glUniform1f(glGetUniformLocation(program, "refractionindex"), inputData.refractionindex);
         glUniform1f(glGetUniformLocation(program, "fresnel"), inputData.fresnel);
 
@@ -226,6 +214,11 @@ int main()
         }
         camera->update(dt, realTime, pdv);
         setPlanetsUniforms(inputData, program, pdv);
+
+        for(const auto& e : planets)
+        {
+            e->update(dt);
+        }
 
         vec3 camPos = camera->getPos();
         glUniform3f(glGetUniformLocation(program ,"cameraPos"), camPos.x, camPos.y, camPos.z);
@@ -254,7 +247,7 @@ int main()
         int W, H;
         glfwGetWindowSize(window, &W, &H);
 
-        // Main render pass here
+        // Main render pass @here
         glBindFramebuffer(GL_FRAMEBUFFER, frameBuf);
         glViewport(0, 0, LOW_RES_W, LOW_RES_H);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

@@ -189,10 +189,11 @@ mat3 changeOfBasis(vec3 target, vec3 up)
 
 // _____________________________________________________ WATER ________________________________________________________
 
-// sum of 3 propagative waves based on angle and time
+// sum of sines based on dot with 4 "splashes" and time
+// these are not spherical sines though, so the result might look a bit odd
 float waveHeight(vec3 gwhere)
 {
-    float waveAmp = 0.05;
+    float waveAmp = 0.03;
     float k0 = dot(gwhere, normalize(vec3(1.1, 0.8, 1.1)));
     float k1 = dot(gwhere, normalize(vec3(-1., 1.2, 0.9)));
     float k2 = dot(gwhere, normalize(vec3(-0.8, -0.3, -0.5)));
@@ -202,12 +203,13 @@ float waveHeight(vec3 gwhere)
     float A2 = 0.09 * 0.5 * (1. + k2 * k2);
     float A3 = 0.05 * 0.5 * (1. + k3 * k3);   
     return  waveAmp *(A0 * (1. + sin(13. * k0 + 0.9 * time))
-                    + A1 * (1. + cos(16. * k1 + 1.2 * time))
+                    + A1 * (1. + sin(16. * k1 + 1.2 * time))
                     + A2 * (1. + sin(30. * k2 + 3.4 * time))
-                    + A3 * (1. + cos(45. * k3 + 6.0 * time))); 
+                    + A3 * (1. + sin(45. * k3 + 6.0 * time))); 
 }
 
-// derivative of waveHeight
+// derivative of waveHeight by central difference
+// would look much better with spherical sines and their analytical partial derivatives...
 vec3 waveNormal(vec3 gwhere)
 {
     vec2 eps = vec2(0.005, 0.);
@@ -385,6 +387,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
     for(int r = 0; r < NB_MAX_REFLECTIONS; r++)
     {
         bool shouldReflect = false, shouldTeleport = false;
+        int iRefl = -1;
 
         float tMin = 1e5;
         float tToPlanet = 1e5;
@@ -399,6 +402,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             float tstart = max(0., tPlanet.x);
             if(tPlanet.y > tPlanet.x && tstart < tMin && tPlanet.y >= 0.)
             {
+                shouldReflect = false;
                 float tOut = 0.;
                 float lod = 100. + 600. * (1. - smoothstep(10000., 30000., length(rayPos - cameraPos)));
                 lod = (lod / (r + 1.)); // reduce level of detail when looking through recursive portals
@@ -411,15 +415,21 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                     tToPlanet = tstart;
                     argmin = mountainColor.rgb;
 
-                    shouldReflect = nextReflectionCoef >= -0.1;
-                }
-                else
-                {
-                    argmin = background(rd); // this line is cursed, it theoretically does nothing but if you remove it everything breaks
+                    if(nextReflectionCoef >= -0.1)
+                    {
+                        nextReflectionCoef *= reflectionCoef;
+                        shouldReflect = true;
+                        iRefl = i;
+                    }
                 }
             }
+        }
 
+        for(int i = 0; i < NB_PLANETS; i++)
+        {
             // atmosphere @here
+            vec3 ppi = planetPos[i];
+            float pri = uPlanetRadius[i];
             vec2 tAtmos = raySphere(r0, rd, ppi, pri + atmosRadius[i]);
             float dstThroughAtmosphere = min(tAtmos.y, tToPlanet - tAtmos.x);
             if(dstThroughAtmosphere > 0.)
@@ -427,7 +437,6 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                 argmin = atmosphere(rd, r0 + tAtmos.x * rd, dstThroughAtmosphere, ppi, pri, sunPos, argmin, i);
             }
         }
-
 
         // sun @here
         vec2 corona = raySphere(r0, rd, sunPos, sunCoronaStrength + sunRadius);
@@ -439,7 +448,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                 tMin = sun.x;
                 argmin = 2.0 * sunColor;
             }
-            else
+            else if(tMin >= 1e5 - 1.)
             {
                 float md = (1. / sunRadius) * raySphereMinDist(r0, rd, sunPos, sunRadius).x + 1.;
                 float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
@@ -502,10 +511,9 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         {
             reflectionCoef = nextReflectionCoef;
 
-            break; // TODO !!!!!
-            // float dstToWater = raySphere(r0, rd, planetPos, uPlanetRadius + seaLevel * mountainAmplitude).x;
-            // r0 = r0 + dstToWater * rd;
-            // rd = reflect(rd, waveNormal(normalize(r0 - planetPos)));
+            float dstToWater = raySphere(r0, rd, planetPos[iRefl], uPlanetRadius[iRefl] + seaLevel[iRefl] * mountainAmplitude[iRefl]).x;
+            r0 = r0 + dstToWater * rd;
+            rd = reflect(rd, waveNormal(normalize(r0 - planetPos[iRefl])));
         }
         else if(shouldTeleport)
         {

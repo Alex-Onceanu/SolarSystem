@@ -144,26 +144,28 @@ void Camera::updatePlanetBasis(const PlanetData& closest)
     leftRef = normal.cross(backRef);
 }
 
-void Camera::walk(const float dt, const PlanetData& closest)
+void Camera::walk(const float dt, const PlanetData& closest, bool ignoreKeys)
 {
     vec3 stepSpeed{};
 
-    if(isKeyPressed[0]) stepSpeed.z -= 1.0;
-    if(isKeyPressed[2]) stepSpeed.z += 1.0;
+    if(!ignoreKeys)
+    {
+        if(isKeyPressed[0]) stepSpeed.z -= 1.0;
+        if(isKeyPressed[2]) stepSpeed.z += 1.0;
 
-    if(isKeyPressed[1]) stepSpeed.x -= 1.0;
-    if(isKeyPressed[3]) stepSpeed.x += 1.0;
+        if(isKeyPressed[1]) stepSpeed.x -= 1.0;
+        if(isKeyPressed[3]) stepSpeed.x += 1.0;
 
-    stepSpeed.normalized();
-    stepSpeed *= speedRef;
-
+        stepSpeed.normalized();
+        stepSpeed *= speedRef;
+    }
     // relative to when the normal is (0, 1, 0)
     back = vec3(sinf(theta.x) * cosf(theta.y), -sinf(theta.y), -cosf(theta.x) * cosf(theta.y));
     left = vec3(cosf(theta.x), 0., sinf(theta.x)) * -1.;
     up = back.cross(left);
 
     // change of basis
-    back  = vec3(back.dot(vec3(-leftRef.x, normal.x, backRef.x)),   back.dot(vec3(-leftRef.y, normal.y, backRef.y)),  back.dot(vec3(-leftRef.z, normal.z, backRef.z)));
+    back  = vec3( back.dot(vec3(-leftRef.x, normal.x, backRef.x)),  back.dot(vec3(-leftRef.y, normal.y, backRef.y)),  back.dot(vec3(-leftRef.z, normal.z, backRef.z)));
     left  = vec3( left.dot(vec3(-leftRef.x, normal.x, backRef.x)),  left.dot(vec3(-leftRef.y, normal.y, backRef.y)),  left.dot(vec3(-leftRef.z, normal.z, backRef.z)));
     up    = vec3(   up.dot(vec3(-leftRef.x, normal.x, backRef.x)),    up.dot(vec3(-leftRef.y, normal.y, backRef.y)),    up.dot(vec3(-leftRef.z, normal.z, backRef.z)));
 
@@ -206,20 +208,29 @@ void Camera::updateMouse()
         tDash = 0.;
     }
 
-    theta.x -= mousePos.x * (0.00032f * M_PIf);
-    theta.y -= mousePos.y * (0.00032f * M_PIf);
-    theta.y = std::max(-M_PIf / 2.0f + 0.0001f, std::min(theta.y, M_PIf / 2.0f - 0.0001f));
+    if(!isKeyPressed[4] and prevWouldHideCursor)
+    {
+        theta.x -= mousePos.x * (0.00032f * M_PIf);
+        if(theta.x <= -M_PIf) theta.x += 2. * M_PIf;
+        if(theta.x >= M_PIf) theta.x -= 2. * M_PIf;
+        theta.y -= mousePos.y * (0.00032f * M_PIf);
+        theta.y = std::max(-M_PIf / 2.0f + 0.0001f, std::min(theta.y, M_PIf / 2.0f - 0.0001f));
+        rewinding = rightClicking;
+    }
+    prevWouldHideCursor = shouldHideCursor;
     mousePos = vec2();
-    rewinding = rightClicking;
 }
 
 PlanetData Camera::findClosest(const std::vector<PlanetData>& planets)
 {
     PlanetData closest = { .p = vec3(INFINITY, INFINITY, INFINITY), .radius = 1., .mass = 1. };
-    for(const auto& e : planets)
+    for(int i = 0; i < planets.size(); i++)
     {
-        if((e.p - pos).length() < (closest.p - pos).length()) 
-            closest = e;
+        if((planets[i].p - pos).length() < (closest.p - pos).length()) 
+        {
+            closest = planets[i];
+            iClosest = i;
+        }
     }
     return closest;
 }
@@ -318,18 +329,39 @@ void Camera::teleportThroughPortal(const PlanetData& closest)
 void Camera::update(float& dt, const float& __time, const std::vector<PlanetData>& planets)
 {
     time = __time;
-    updateMouse();
+    
+    int iOldClosest = iClosest;
     PlanetData closest = findClosest(planets);
+    mountainAmplitude = closest.mountainAmplitude;
+    seaLevel = closest.seaLevel;
+    if(iOldClosest != -1)
+    {
+        if(iOldClosest != iClosest)
+        {
+            // change of closest planet
+            vec3 oldBack = back, oldLeft = left;
+            updatePlanetBasis(closest);
+            theta = vec2(acosf(oldLeft.dot(leftRef)), -asinf(normal.dot(oldBack)));
+        }
+        else if((pos - closest.p).length() < 600. + heightHere(closest) and not rewinding)
+        {
+            pos += closest.p - oldClosestPos;
+        }
+    }
+    oldClosestPos = closest.p;
+
+    updateMouse();
+
     if(rewinding and not timeline->empty())
     {
-        // dt *= -1.;
+        dt *= -1.;
         dashSpeed = vec3();
         gravitySpeed = vec3();
         float rewindingSince = 10. * (time - startedRewinding);
         float t = 1. - CLAMP(rewindingSince - static_cast<float>(static_cast<int>(rewindingSince)), 0.f, 1.f); // = fract(rewindingSince)
         vec3 end = timeline->front();
         pos = rewindingStart * t + end * (1. - t); // lerp position between current checkpoint and previous one
-        updatePlanetBasis(closest);
+        // updatePlanetBasis(closest);
 
         auto tick = static_cast<unsigned int>(rewindingSince); // = floor(rewindingSince)
         if(tick != lastRewindingTick)
@@ -373,6 +405,7 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     }
 
     // if((pos - closest.p).length() <= heightHere(closest) + mountainAmplitude) 
+    walk(dt, closest, rewinding);
     if(not rewinding)
     {
         if(bluePortalPressed) bluePortal();
@@ -380,7 +413,6 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
 
         teleportThroughPortal(closest);
         oldPos = pos;
-        walk(dt, closest);
         if(isKeyPressed[5] and onGround) jump(dt);
     }
     else oldPos = pos;

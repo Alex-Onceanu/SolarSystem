@@ -41,7 +41,7 @@ InputData Input::getInput()
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
-    static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 1242., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 9448.4,
+    static InputData data{  .sunPos{ 0.,30.,10360. }, .sunRadius = 1242., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 9448.4,
                             .fov = 60., .cameraSpeed = 230., .jumpStrength = 450.,
                             .nb_steps_i = 9.01, .nb_steps_j = 6.01,
                             .atmosScattering = 0.4, .mountainFrequency = 8.,
