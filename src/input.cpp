@@ -1,14 +1,17 @@
 #include "input.hpp"
 #include "init.h" // RESOLUTION_W
 
+#if 0
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
+#endif
 
 #include <string>
 
 void Input::init(GLFWwindow* const window)
 {
+#if 0
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -19,19 +22,23 @@ void Input::init(GLFWwindow* const window)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
+#endif
 }
 
 void Input::destroy()
 {
+#if 0
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+#endif
 }
 
 InputData Input::getInput()
 {
     static bool collapsed = true;
 
+#if 0
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -40,6 +47,7 @@ InputData Input::getInput()
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
+#endif
 
     static InputData data{  .sunPos{ 0.,30.,10360. }, .sunRadius = 1242., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 9448.4,
                             .fov = 60., .cameraSpeed = 230., .jumpStrength = 450.,
@@ -48,7 +56,7 @@ InputData Input::getInput()
                             .refractionindex = 0.75, .fresnel = 2.,
                             .ambientCoef = 0.02, .diffuseCoef = 0.21, .minDiffuse = 0.36, .penumbraCoef = 0.06,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 1073. };
-
+#if 0
     // data.planetPos[i][0] = 1400.; data.planetPos[i][1] = 1580.; data.planetPos[i][2] = 3300.;
     // data.planetRadius[i] = 500.;
     // data.planetMass[i] = 700000000.;
@@ -126,11 +134,14 @@ InputData Input::getInput()
     // }
 
     ImGui::End();
+#endif
     return data;
 }
 
 void Input::renderInterface()
 {
+#if 0
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
 }

@@ -12,14 +12,7 @@ set(PROJECT_SOURCES
             ${PROJECT_SOURCE_DIR}/input.cpp
             ${PROJECT_SOURCE_DIR}/camera.cpp
             ${PROJECT_SOURCE_DIR}/planet.cpp
-            dependencies/glad/glad.c
-            dependencies/imgui/imgui.cpp
-            dependencies/imgui/imgui_widgets.cpp
-            dependencies/imgui/imgui_tables.cpp
-            dependencies/imgui/imgui_draw.cpp
-            dependencies/imgui/imgui_demo.cpp
-            dependencies/imgui/backends/imgui_impl_glfw.cpp
-            dependencies/imgui/backends/imgui_impl_opengl3.cpp)
+            dependencies/glad/glad.c)
 
 
 add_subdirectory(${PROJECT_DIR}/dependencies/glfw)

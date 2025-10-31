@@ -1,8 +1,6 @@
 #include "camera.hpp"
 #include "math.hpp"
 
-#include "imgui.h"
-
 #include <iostream>
 #include <algorithm>
 
@@ -74,8 +72,8 @@ float Camera::heightHere(const PlanetData& pl) const
 
 void Camera::glfwCharCallback(GLFWwindow* window, unsigned int c)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.AddInputCharacter(c);
+    // ImGuiIO& io = ImGui::GetIO();
+    // io.AddInputCharacter(c);
 }
 
 void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -95,8 +93,7 @@ void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action,
     }
     else
     {
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddMouseButtonEvent(button, action);
+
     }
 }
 
@@ -128,8 +125,7 @@ void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
 {
     if(isKeyPressed[4] or not shouldHideCursor)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddMousePosEvent(xpos, ypos);
+
     }
     else 
     {
