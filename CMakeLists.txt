@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(IGR201)
+project(tpOpenGL)
 
 set(PROJECT_DIR ${CMAKE_SOURCE_DIR})
 set(PROJECT_INCLUDE_DIR ${PROJECT_DIR}/include ${PROJECT_DIR}/dependencies/imgui ${PROJECT_DIR}/dependencies/glad)
