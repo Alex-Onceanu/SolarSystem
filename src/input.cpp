@@ -5,6 +5,8 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
+#include <string>
+
 void Input::init(GLFWwindow* const window)
 {
     // Setup Dear ImGui context
@@ -34,21 +36,26 @@ InputData Input::getInput()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    const int w = 380, h = 400;
+    const int w = 480, h = 700;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(w, h));
     ImGui::Begin("Bidouiller des constantes", &collapsed, ImGuiWindowFlags_NoResize);
 
-    static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 500., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 3200.0,
-                            .planetPos{ 0.,-580.,300. }, .planetRadius = 500., .planetMass = 700000000.,
-                            .fov = 60., .cameraSpeed = 230., .jumpStrength = 400.,
+    static InputData data{  .sunPos{ -10.,30.,10360. }, .sunRadius = 1242., .sunColor{ 1.0,1.0,0.5 }, .sunCoronaStrength = 9448.4,
+                            .fov = 60., .cameraSpeed = 230., .jumpStrength = 450.,
                             .nb_steps_i = 9.01, .nb_steps_j = 6.01,
-                            .atmosRadius = 204., .atmosFalloff = 6.0, .atmosScattering = 0.4, .atmosColor{700., 530., 440.},
-                            .mountainFrequency = 8., .mountainAmplitude = 80., 
-                            .seaLevel = .45, .waterColor{ 82. / 255.,147. / 255.,200. / 255.,0.13 }, .refractionindex = 0.75, .fresnel = 2.,
+                            .atmosScattering = 0.4, .mountainFrequency = 8.,
+                            .refractionindex = 0.75, .fresnel = 2.,
                             .ambientCoef = 0.02, .diffuseCoef = 0.21, .minDiffuse = 0.36, .penumbraCoef = 0.06,
                             .nbStars = 20000., .starsDisplacement = 0.069, .starSize = 2000., .starSizeVariation = 300., .starVoidThreshold = 0.249, .starFlickering = 1073. };
 
+    // data.planetPos[i][0] = 1400.; data.planetPos[i][1] = 1580.; data.planetPos[i][2] = 3300.;
+    // data.planetRadius[i] = 500.;
+    // data.planetMass[i] = 700000000.;
+    // data.mountainAmplitude[i] = 80.;
+    // data.atmosRadius[i] = 144.;
+    // data.atmosFalloff[i] = 18.;
+    // data.atmosColor[i][0] = 700.; data.atmosColor[i][1] = 530.; data.atmosColor[i][2] = 440.;
     auto io = ImGui::GetIO();
     ImGui::Text("FPS: %.1f", io.Framerate);
 
@@ -62,23 +69,14 @@ InputData Input::getInput()
 
     if (ImGui::CollapsingHeader("Sun"))
     {
-        ImGui::SliderFloat3("sun position", data.sunPos, -5000., 50000.);
-        ImGui::SliderFloat("sun radius", &data.sunRadius, 1.0, 6000.0);
+        ImGui::SliderFloat3("sun position", data.sunPos, -40000., 40000.);
+        ImGui::SliderFloat("sun radius", &data.sunRadius, 1.0, 2000.0);
         ImGui::ColorEdit3("sun color", data.sunColor);
         ImGui::SliderFloat("sun corona strength", &data.sunCoronaStrength, 1.0, 24000.0);
     }
 
-    if (ImGui::CollapsingHeader("Planet"))
-    {
-        ImGui::SliderFloat3("planet position", data.planetPos, -50000., 50000.);
-        ImGui::SliderFloat("planet radius", &data.planetRadius, 1., 2000.);
-        ImGui::SliderFloat("planet mass", &data.planetMass, 1., 10000000000.);
-        ImGui::SliderFloat("mountain height", &data.mountainAmplitude, .01, 300.);
-    }
     if (ImGui::CollapsingHeader("Water"))
     {
-        ImGui::SliderFloat("sea level", &data.seaLevel, 0., 1.);
-        ImGui::ColorEdit4("waterColor", data.waterColor);
         ImGui::SliderFloat("refractionindex", &data.refractionindex, 0.1, 3.);
         ImGui::SliderFloat("fresnel", &data.fresnel, 0.1, 5.);
     }
@@ -95,10 +93,7 @@ InputData Input::getInput()
     {
         ImGui::SliderFloat("atmos steps i", &data.nb_steps_i, 0., 30.);
         ImGui::SliderFloat("atmos steps j", &data.nb_steps_j, 0., 30.);
-        ImGui::SliderFloat("atmos radius", &data.atmosRadius, 0., 5000.0);
-        ImGui::SliderFloat("atmos falloff", &data.atmosFalloff, 0.0001, 200.0);
         ImGui::SliderFloat("atmos scattering", &data.atmosScattering, 0., 10.);
-        ImGui::SliderFloat3("atmos lambda (nm)", data.atmosColor, 400., 800.);
     }
     
     if (ImGui::CollapsingHeader("Background"))
@@ -110,6 +105,25 @@ InputData Input::getInput()
         ImGui::SliderFloat("starVoidThreshold", &data.starVoidThreshold, 0., 1.);
         ImGui::SliderFloat("starFlickering", &data.starFlickering, 0., 2000.);
     }
+
+    // for(int i = 0; i < NB_PLANETS; i++)
+    // {
+    //     if (ImGui::CollapsingHeader((std::string("Planet") + std::to_string(i)).c_str()))
+    //     {
+    //         ImGui::SliderFloat3((std::string("Position") + std::to_string(i)).c_str(), data.planetPos[i], -40000., 40000.);
+    //         ImGui::SliderFloat ((std::string("Radius")+ std::to_string(i)).c_str(), &(data.planetRadius[i]), 1., 2000.);
+    //         ImGui::SliderFloat ((std::string("Mass")+ std::to_string(i)).c_str(), &(data.planetMass[i]), 1., 2000000000.);
+    //         ImGui::SliderFloat ((std::string("Mtn height")+ std::to_string(i)).c_str(), &(data.mountainAmplitude[i]), .01, 150.);
+    //         ImGui::SliderFloat ((std::string("atmos radius")+ std::to_string(i)).c_str(), &(data.atmosRadius[i]), 1., 800.0);
+    //         ImGui::SliderFloat ((std::string("atmos falloff")+ std::to_string(i)).c_str(), &(data.atmosFalloff[i]), 0.0001, 40.0);
+    //         ImGui::SliderFloat3((std::string("atmos lambda (nm)")+ std::to_string(i)).c_str(), data.atmosColor[i], 400., 800.);
+    //         ImGui::SliderFloat ((std::string("sea level") + std::to_string(i)).c_str(), &(data.seaLevel[i]), 0., 1.);
+    //         ImGui::ColorEdit4((std::string("water color") + std::to_string(i)).c_str(), data.waterColor[i]);
+    //         ImGui::ColorEdit3((std::string("beach color") + std::to_string(i)).c_str(), data.beachColor[i]);
+    //         ImGui::ColorEdit3((std::string("grass color") + std::to_string(i)).c_str(), data.grassColor[i]);
+    //         ImGui::ColorEdit3((std::string("peak color") + std::to_string(i)).c_str(), data.peakColor[i]);
+    //     }
+    // }
 
     ImGui::End();
     return data;

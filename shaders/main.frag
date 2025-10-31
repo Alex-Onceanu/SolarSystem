@@ -3,7 +3,7 @@
 layout(location = 0) in vec2 vFragPos;
 layout(location = 0) out vec4 outColor;
 
-#define NB_PLANETS 3
+#define NB_PLANETS 8
 
 uniform float time;
 uniform float fov;
@@ -19,7 +19,10 @@ uniform vec3 sunColor;
 uniform float sunCoronaStrength;
 
 uniform vec3 planetPos[NB_PLANETS];
-uniform float uPlanetRadius[NB_PLANETS]; // say my name
+uniform float uPlanetRadius[NB_PLANETS];
+uniform vec3 beachColor[NB_PLANETS];
+uniform vec3 grassColor[NB_PLANETS];
+uniform vec3 peakColor[NB_PLANETS];
 
 uniform float ambientCoef;
 uniform float diffuseCoef;
@@ -285,9 +288,9 @@ vec3 shadePlanet(vec3 rayDir, vec3 pos, vec3 spherePos, float radius, vec3 light
 
         shouldReflect = 1. - pow(refrCoef, fresnel);
     }
-    else if(n < seaLevel[i] + 0.05) clr = vec3(216., 197., 150.) / 255.;
+    else if(n < seaLevel[i] + 0.05) clr = beachColor[i];
     // else if(n < 0.75) clr = vec3(90.,139.,93.) / 255.; else clr = vec3(205., 200., 200.) / 255.; // snow
-    else clr = mix(vec3(90.,139.,93.) / 255., vec3(202., 202., 186.) / 255., smoothstep(seaLevel[i] + 0.07, 0.85, n));
+    else clr = mix(grassColor[i], peakColor[i], smoothstep(seaLevel[i] + 0.07, 0.85, n));
     
     vec2 eps = vec2(0.06, 0.);
     // derivative of implicit surface y = f(x, z) is (-df/dx, 1, -df/dz)
