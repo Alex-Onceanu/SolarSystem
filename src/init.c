@@ -228,7 +228,7 @@ unsigned int init(GLFWwindow** window)
 
     glfwMakeContextCurrent(*window);
     glfwSetWindowSizeLimits(*window, LOW_RES_W, LOW_RES_H, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    // glfwSwapInterval(0);
+    glfwSwapInterval(0);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
