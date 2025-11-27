@@ -1,7 +1,8 @@
-#version 450
+#version 300 es
+precision highp float;
 
-layout(location = 0) in vec2 vFragPos;
-layout(location = 0) out vec4 outColor;
+in vec2 vFragPos;
+out vec4 outColor;
 
 uniform float time;
 uniform float aspectRatio;

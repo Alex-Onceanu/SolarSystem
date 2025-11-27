@@ -33,9 +33,5 @@ PlanetData Planet::getInfo() const
 
 void Planet::update(const float& dt)
 {
-    float dphi = 2. * M_PIf * dt / periodDuration;
-    pos -= sunPos;
-    pos.y = cosf(dphi) * pos.y - sinf(dphi) * pos.z;
-    pos.z = sinf(dphi) * pos.y + cosf(dphi) * pos.z;
-    pos += sunPos;
+    // @here planets can orbit around the sun
 }

@@ -1,9 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include <GLFW/glfw3.h>
-
-constexpr size_t NB_PLANETS = 8; // must be static because of uniform arrays in main.frag
+constexpr unsigned int NB_PLANETS = 8; // must be static because of uniform arrays in main.frag
 struct InputData {
     float sunPos[3];
     float sunRadius;
@@ -51,7 +49,7 @@ struct InputData {
 class Input
 {
 public:
-    static void init(GLFWwindow* const window);
+    static void init();
     static void destroy();
 
     static InputData getInput();

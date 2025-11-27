@@ -1,8 +1,6 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <GLFW/glfw3.h>
-
 #include <vector>
 #include <deque>
 #include <memory>
@@ -13,7 +11,7 @@
 class Camera
 {
 public:
-    Camera(GLFWwindow* __window, vec3 spawn);
+    Camera(vec3 spawn);
     void update(float& dt, const float& __time, const std::vector<PlanetData>& planets);
 
     vec3 getPos() { return pos; }
@@ -40,10 +38,10 @@ public:
     float getBulletTimer() { return tDash / bulletTimeDuration; }
     bool isRewinding() { return rewinding; }
 
-    static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
-    static void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-    static void glfwCharCallback(GLFWwindow* window, unsigned int c);
+    // static void glfwKeyCallback(int key, int scancode, int action, int mods);
+    // static void mouseMoveCallback(double xpos, double ypos);
+    // static void glfwMouseButtonCallback(int button, int action, int mods);
+    // static void glfwCharCallback(unsigned int c);
 
 private:
     void walk(const float dt, const PlanetData& closest, bool ignoreKeys);
@@ -61,7 +59,6 @@ private:
     void redPortal();
 
 private:
-    GLFWwindow* window{};
     bool prevWouldHideCursor = false;
 
     float time{};

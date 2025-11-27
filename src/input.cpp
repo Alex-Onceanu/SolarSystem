@@ -1,5 +1,5 @@
 #include "input.hpp"
-#include "init.h" // RESOLUTION_W
+#include "init.hpp" // RESOLUTION_W
 
 #if 0
 #include "imgui.h"
@@ -9,7 +9,7 @@
 
 #include <string>
 
-void Input::init(GLFWwindow* const window)
+void Input::init()
 {
 #if 0
     // Setup Dear ImGui context

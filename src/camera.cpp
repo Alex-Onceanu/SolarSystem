@@ -3,32 +3,17 @@
 
 #include <iostream>
 #include <algorithm>
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#include <GLES3/gl3.h>
 
 constexpr size_t NB_KEYS = 8;
 
 bool isKeyPressed[NB_KEYS];
 bool justClicked = false, justUnclicked = false, rightClicking = false, justRightClicked = false;
 bool bluePortalPressed = false, redPortalPressed = false;
-bool shouldHideCursor = true;
+bool shouldHideCursor = false;
 vec2 mousePos;
-
-Camera::Camera(GLFWwindow* __window, vec3 spawn)
-    : window(__window), pos(spawn)
-{
-    timeline = std::make_unique<std::deque<vec3>>();
-    glfwSetKeyCallback(window, glfwKeyCallback);
-    glfwSetMouseButtonCallback(window, glfwMouseButtonCallback);
-    glfwSetCharCallback(window, glfwCharCallback);
-
-    glfwSetCursorPosCallback(window, mouseMoveCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    if(glfwRawMouseMotionSupported())
-    { 
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    }
-}
 
 // found this value noise on https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 // is actually a low-frequency version of the heightmap used for rendering the mountains, for collisions
@@ -69,63 +54,70 @@ float Camera::heightHere(const PlanetData& pl) const
     return pl.radius + 65. + mountainHeight;
 }
 
-void Camera::glfwCharCallback(GLFWwindow* window, unsigned int c)
-{
-    // ImGuiIO& io = ImGui::GetIO();
-    // io.AddInputCharacter(c);
-}
 
-void Camera::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+EM_BOOL mouse_button_callback(int eventType, const EmscriptenMouseEvent* e, void* userData)
 {
-    if(!isKeyPressed[4] and shouldHideCursor)
+    if(shouldHideCursor)
     {
-        if(button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_PRESS)
-            justClicked = true;
+        if(e->button == 0) // Bouton gauche
+        {
+            if(eventType == EMSCRIPTEN_EVENT_MOUSEDOWN)
+                justClicked = true;
+            else if(eventType == EMSCRIPTEN_EVENT_MOUSEUP)
+                justUnclicked = true;
+        }
+        else if(e->button == 2) // Bouton droit
+        {
+            if(eventType == EMSCRIPTEN_EVENT_MOUSEDOWN)
+                justRightClicked = true;
 
-        else if(button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_RELEASE)
-            justUnclicked = true;
-
-        if(button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS)
-            justRightClicked = true;
-
-        rightClicking = (button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS or action == GLFW_REPEAT);   
+            rightClicking = (eventType == EMSCRIPTEN_EVENT_MOUSEDOWN);
+        }
     }
+
+    return EM_TRUE;
 }
 
-void Camera::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{   
-    bool isPressed = action == GLFW_PRESS || action == GLFW_REPEAT;
+EM_BOOL request_pointerlock(int eventType, const EmscriptenMouseEvent* e, void* userData)
+{
+    if(!shouldHideCursor)
+    {
+        shouldHideCursor = emscripten_request_pointerlock("#canvas", EM_TRUE) == EMSCRIPTEN_RESULT_SUCCESS;
+    }
+    return EM_TRUE;
+}
 
-    int everyKey[NB_KEYS]{ GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, GLFW_KEY_LEFT_ALT, GLFW_KEY_SPACE };
-    int altKeys[NB_KEYS] { GLFW_KEY_Z, GLFW_KEY_Q, -1, -1, GLFW_KEY_RIGHT_ALT, -1 };
+EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent *e, void *userData)
+{
+    bool isPressed = (eventType == EMSCRIPTEN_EVENT_KEYDOWN);
+
+    // Remplacement des touches GLFW par leurs noms JS correspondants
+    const char* everyKey[NB_KEYS] = { "w", "a", "s", "d", " " }; // " " pour espace
+    const char* altKeys[NB_KEYS]   = { "z", "q", nullptr, nullptr, nullptr };
 
     for(int i = 0; i < NB_KEYS; i++)
     {
-        if(key == everyKey[i] || (altKeys[i] != -1 && key == altKeys[i]))
+        if(strcmp(e->key, everyKey[i]) == 0 || (altKeys[i] && strcmp(e->key, altKeys[i]) == 0))
         {
             isKeyPressed[i] = isPressed;
         }
     }
-    if(key == GLFW_KEY_ESCAPE and action == GLFW_PRESS)
-    {
-        shouldHideCursor = not shouldHideCursor;
-        glfwSetCursorPos(window, 0.0, 0.0);
-    }
 
-    bluePortalPressed = (key == GLFW_KEY_E and action == GLFW_PRESS);
-    redPortalPressed = (key == GLFW_KEY_R and action == GLFW_PRESS);
+    bluePortalPressed = (strcmp(e->key, "e") == 0 && isPressed);
+    redPortalPressed  = (strcmp(e->key, "r") == 0 && isPressed);
+
+    return EM_TRUE;
 }
 
-void Camera::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
+
+EM_BOOL mouse_move_callback(int eventType, const EmscriptenMouseEvent* e, void* userData)
 {
-    if(isKeyPressed[4] or not shouldHideCursor)
-    {
-        // some imgui stuff used to go here
-    }
-    else 
-    {
-        mousePos.x = static_cast<float>(xpos), mousePos.y = static_cast<float>(ypos);
-    }
+    if(!shouldHideCursor) return EM_TRUE;
+
+    mousePos.x = static_cast<float>(e->movementX);
+    mousePos.y = static_cast<float>(e->movementY);
+
+    return EM_TRUE;
 }
 
 void Camera::updatePlanetBasis(const PlanetData& closest)
@@ -169,15 +161,10 @@ void Camera::walk(const float dt, const PlanetData& closest, bool ignoreKeys)
 
 void Camera::updateMouse()
 {
-    if(isKeyPressed[4] or not shouldHideCursor)
-    {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
-    else
-    {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        glfwSetCursorPos(window, 0., 0.);
-    }
+    EmscriptenPointerlockChangeEvent e;
+    if(emscripten_get_pointerlock_status(&e) == EMSCRIPTEN_RESULT_SUCCESS)
+      shouldHideCursor = e.isActive;
+
 
     if(justRightClicked)
     {
@@ -199,13 +186,13 @@ void Camera::updateMouse()
         tDash = 0.;
     }
 
-    if(!isKeyPressed[4] and prevWouldHideCursor)
+    if(prevWouldHideCursor)
     {
-        theta.x -= mousePos.x * (0.00032f * M_PIf);
-        if(theta.x <= -M_PIf) theta.x += 2. * M_PIf;
-        if(theta.x >= M_PIf) theta.x -= 2. * M_PIf;
-        theta.y -= mousePos.y * (0.00032f * M_PIf);
-        theta.y = std::max(-M_PIf / 2.0f + 0.0001f, std::min(theta.y, M_PIf / 2.0f - 0.0001f));
+        theta.x -= mousePos.x * (0.00032f * 3.141592653589793f);
+        if(theta.x <= -3.141592653589793f) theta.x += 2. * 3.141592653589793f;
+        if(theta.x >= 3.141592653589793f) theta.x -= 2. * 3.141592653589793f;
+        theta.y -= mousePos.y * (0.00032f * 3.141592653589793f);
+        theta.y = std::max(-3.141592653589793f / 2.0f + 0.0001f, std::min(theta.y, 3.141592653589793f / 2.0f - 0.0001f));
         rewinding = rightClicking;
     }
     prevWouldHideCursor = shouldHideCursor;
@@ -253,6 +240,20 @@ void Camera::applyGravity(const float& dt, const PlanetData& closest)
         dashSpeed -= normal * normal.dot(dashSpeed); // project dash speed on normal plane (slide)
     }
 }
+
+Camera::Camera(vec3 spawn)
+    : pos(spawn)
+{
+    timeline = std::make_unique<std::deque<vec3>>();
+    emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, EM_TRUE, key_callback);
+    emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, nullptr, EM_TRUE, key_callback);
+    emscripten_set_mousemove_callback("#canvas", nullptr, EM_TRUE, mouse_move_callback);
+    emscripten_set_mousedown_callback("#canvas", nullptr, EM_TRUE, mouse_button_callback);
+    emscripten_set_mouseup_callback("#canvas", nullptr, EM_TRUE, mouse_button_callback);
+
+    emscripten_set_mousedown_callback("#canvas", nullptr, EM_TRUE, request_pointerlock);
+}
+
 
 void Camera::jump(const float dt)
 {
@@ -433,7 +434,7 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
 
         teleportThroughPortal(closest);
         oldPos = pos;
-        if(isKeyPressed[5] and onGround) jump(dt);
+        if(isKeyPressed[4] and onGround) jump(dt);
     }
     else oldPos = pos;
     updatePlanetBasis(closest);

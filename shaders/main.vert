@@ -1,7 +1,8 @@
-#version 450
+#version 300 es
+precision highp float;
 
-layout(location = 0) in vec2 aPos;
-layout(location = 0) out vec2 vFragPos;
+in vec2 aPos;
+out vec2 vFragPos;
 
 void main() {
     gl_Position = vec4(aPos, 1.0, 1.0);

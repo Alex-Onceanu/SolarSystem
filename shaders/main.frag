@@ -1,7 +1,8 @@
-#version 450
+#version 300 es
+precision highp float;
 
-layout(location = 0) in vec2 vFragPos;
-layout(location = 0) out vec4 outColor;
+in vec2 vFragPos;
+out vec4 outColor;
 
 #define NB_PLANETS 8
 
@@ -112,7 +113,7 @@ vec2 inverseSF( vec3 p )
 {
     const float kTau = 6.28318530718;
     const float kPhi = (1.0+sqrt(5.0))/2.0;
-    const float kNum = nbStars;
+    float kNum = nbStars;
 
     float k  = max(2.0, floor(log2(kNum*kTau*0.5*sqrt(5.0)*(1.0-p.z*p.z))/log2(kPhi+1.0)));
     float Fk = pow(kPhi, k)/sqrt(5.0);
@@ -402,7 +403,8 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                 shouldReflect = false;
                 float tOut = 0.;
                 float lod = 100. + 600. * (1. - smoothstep(10000., 30000., length(rayPos - cameraPos)));
-                lod = (lod / (r + 1.)); // reduce level of detail when looking through recursive portals
+                highp float fr = float(r);
+                lod = (lod / (fr + 1.)); // reduce level of detail when looking through recursive portals
                 vec3 mountainColor = shadePlanet(rd, r0 + tstart * rd, ppi, 
                                                 pri, sunPos, tPlanet.y - tstart, lod, i, nextReflectionCoef, tOut);
 
@@ -459,7 +461,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         vec3 nextr0 = r0;
         vec3 nextrd = rd;
         float tPortal1 = rayCircle(r0, rd, portalPos1, portalPlane1, portalSize1);
-        if(tPortal1 <= tMin && (tPortal1 >= 0 || (r == 0 && tPortal1 >= -3.9)))
+        if(tPortal1 <= tMin && (tPortal1 >= 0. || (r == 0 && tPortal1 >= -3.9)))
         {
             nextr0 = portalBasis2 * transpose(portalBasis1) * (r0 + tPortal1 * rd - portalPos1) + portalPos2;
             nextrd = portalBasis2 * transpose(portalBasis1) * rd;
@@ -480,7 +482,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
             }
         }
         float tPortal2 = rayCircle(r0, rd, portalPos2, portalPlane2, portalSize2);
-        if(tPortal2 <= tMin && (tPortal2 >= 0 || (r == 0 && tPortal2 >= -3.9)))
+        if(tPortal2 <= tMin && (tPortal2 >= 0. || (r == 0 && tPortal2 >= -3.9)))
         {
             nextr0 = portalBasis1 * transpose(portalBasis2) * (r0 + tPortal2 * rd - portalPos2) + portalPos1;
             nextrd = portalBasis1 * transpose(portalBasis2) * rd;
