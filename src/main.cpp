@@ -261,7 +261,7 @@ int main()
     opticalDepthTexture = init_texture("../assets/noise.pgm");
 
     Input::init();
-    camera = std::make_unique<Camera>(vec3(-9434.7906 - 300, -25662.6391 + 600, 2955.8649));
+    camera = std::make_unique<Camera>(vec3(-9434.7906 - 300, -25662.6391 + 600, 2955.8649 + 100));
 
     startTime = std::chrono::high_resolution_clock::now();
     prevTime = startTime;

@@ -227,12 +227,17 @@ PlanetData Camera::findClosest(const std::vector<PlanetData>& planets)
 
 void Camera::applyGravity(const float& dt, const PlanetData& closest)
 {
-    onGround = false;
     vec3 Fdir = (pos - closest.p).normalize();
     vec3 F = Fdir * (-closest.mass / (closest.p - pos).dot(closest.p - pos));
-    gravitySpeed += F * dt; // Newton's second law + integrating acceleration
+
     float h = heightHere(closest);
-    if((closest.p - pos).length() <= h)
+    bool underGround = (closest.p - pos).length() <= h;
+
+    if(!underGround)
+    {
+        gravitySpeed += F * dt; // Newton's second law + integrating acceleration
+    }
+    else
     {
         onGround = true;
         gravitySpeed = vec3(); // reset gravity when landing
@@ -257,6 +262,7 @@ Camera::Camera(vec3 spawn)
 
 void Camera::jump(const float dt)
 {
+    onGround = false;
     gravitySpeed += normal * (jumpStrength);
 }
 
