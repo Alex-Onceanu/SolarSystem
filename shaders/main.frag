@@ -428,7 +428,7 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
         for(int i = 0; i < NB_PLANETS; i++)
         {
             // atmosphere @here
-            if(i == iPlanet) continue;
+            // if(i == iPlanet) continue;
             vec3 ppi = planetPos[i];
             float pri = uPlanetRadius[i] + seaLevel[i] * mountainAmplitude[i];
             vec2 tAtmos = raySphere(r0, rd, ppi, pri + atmosRadius[i]);
