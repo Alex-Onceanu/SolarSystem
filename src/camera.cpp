@@ -357,9 +357,14 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
         if(iOldClosest != iClosest)
         {
             // change of closest planet
-            vec3 oldBack = back, oldLeft = left;
+            vec3 oldBack = back, oldLeft = left, oldNormal = normal;
             updatePlanetBasis(closest);
-            theta = vec2(acosf(oldLeft.dot(leftRef)), -asinf(normal.dot(oldBack)));
+            thetaDiff = acosf(oldNormal.dot(normal));
+            animAxis = (normal.cross(oldNormal)).normalize();
+            oldTheta = theta;
+            newTheta = vec2(acosf(oldLeft.dot(leftRef)), -asinf(normal.dot(oldBack)));
+            animStart = time;
+            changingPlanet = true;
         }
         else if((pos - closest.p).length() < 600. + closest.radius + closest.mountainAmplitude + 65. and not rewinding)
         {
@@ -372,6 +377,26 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     if(iPortalClosest2 != -1) portalPos2 += dposForPortal2;
 
     updateMouse();
+
+    if(changingPlanet)
+    {
+        if(time - animStart > animDuration)
+        {
+            theta = newTheta;
+            backRef = initBackRef.rotate(animAxis, thetaDiff);
+            leftRef = initLeftRef.rotate(animAxis, thetaDiff);
+            normal = initNormal.rotate(animAxis, thetaDiff);
+            changingPlanet = false;
+        }
+        else
+        {
+            float tt = (time - animStart) / animDuration;
+            theta = oldTheta * (1.f - tt) + newTheta * tt;
+            backRef = initBackRef.rotate(animAxis, thetaDiff * tt);
+            leftRef = initLeftRef.rotate(animAxis, thetaDiff * tt);
+            normal = initNormal.rotate(animAxis, thetaDiff * tt);
+        }
+    }
 
     if(rewinding and not timeline->empty())
     {

@@ -106,6 +106,16 @@ private:
     int iPortalClosest1 = -1, iPortalClosest2 = -1;
     vec3 dposForPortal1{}, dposForPortal2{};
     vec3 oldClosestPosForPortal1{}, oldClosestPosForPortal2{};
+
+    // change of closest planet animation
+    float animStart = 0.;
+    float thetaDiff = 0.;
+    vec2 newTheta = vec2(0., 0.);
+    vec2 oldTheta = vec2(0., 0.);
+    vec3 animAxis = vec3(0., 0., 0.);
+    bool changingPlanet = false;
+    vec3 initBackRef = backRef, initLeftRef = leftRef, initNormal = normal;
+    float animDuration = 1.;
 };
 
 #endif // CAMERA_H
