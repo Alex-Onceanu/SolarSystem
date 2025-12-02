@@ -24,6 +24,7 @@
 </head>
 <body style="margin: 0 !important;padding: 0 !important;">
     <canvas id="canvas"></canvas>
+    <label id="coins" style="position:absolute; top:0%;color: burlywood; padding: 1%;">Coins : 0</label>
     <script>
     const canvas = document.getElementById('canvas');
 
@@ -47,6 +48,19 @@
 
     // Redimension dynamique
     window.addEventListener('resize', resizeCanvas);
+
+    var nbCoins = 0;
+    const d = new Date();
+    var startTime = d.getTime();
+    function foundCoin()
+    {
+        nbCoins += 1;
+        document.getElementById("coins").innerText = "Coins : " + nbCoins;
+        if(nbCoins >= 8)
+        {
+            alert("Congratulations ! You found all the coins. Time : " + (d.getTime() - startTime));
+        }
+    }
     </script>
     <script src="main.js"></script>
 </body>

@@ -4,7 +4,7 @@ precision highp float;
 in vec2 vFragPos;
 out vec4 outColor;
 
-uniform float time;
+uniform float mtime;
 uniform float aspectRatio;
 uniform float tCharge;
 uniform float tBulletTime;
@@ -22,7 +22,7 @@ void main()
     const float PI = 3.1415926536;
     float theta = atan(-uv.x, -uv.y);
 
-    vec2 shakedUV = uv + 0.02 * pow(tCharge, 2.) * (-1. + 2. * vec2(random(time, time * time), random(random(time, time * time), random(time * time, time))));
+    vec2 shakedUV = uv + 0.02 * pow(tCharge, 2.) * (-1. + 2. * vec2(random(mtime, mtime * mtime), random(random(mtime, mtime * mtime), random(mtime * mtime, mtime))));
     float dashCharge = smoothstep(0.04, 0.05, length(shakedUV)) * smoothstep(-0.07, -0.06, -length(shakedUV)) * step(theta, PI * (2. * tCharge - 1.));
     float center = 1. - step(0.007, length(uv));
     vec4 uiClr = vec4(mix(vec3(1., 1., 0.), vec3(1., 0., 0.), tCharge) * dashCharge + vec3(1.) * center, dashCharge + center);
@@ -34,7 +34,7 @@ void main()
 
     float n = 30.0;
 	float norm_n = pow(pow(abs(vFragPos.x), n) + pow(abs(vFragPos.y), n), 1.0 / n);
-    float t = 0.6 * (atan(vFragPos.y, vFragPos.x) - time) + PI;
+    float t = 0.6 * (atan(vFragPos.y, vFragPos.x) - mtime) + PI;
     float spin = 0.5 + 0.5 * sin(10. * t);
     vec4 loop = 1.4 * smoothstep(0.95, 1., norm_n) * vec4(loopClr * spin, spin * tRewind);
 

@@ -37,6 +37,7 @@ public:
     float getDashTimer() { return std::min(dashCharge, tDash) / dashCharge; }
     float getBulletTimer() { return tDash / bulletTimeDuration; }
     bool isRewinding() { return rewinding; }
+    int getPickedUpCoins() { return pickedUpCoins; }
 
     // static void glfwKeyCallback(int key, int scancode, int action, int mods);
     // static void mouseMoveCallback(double xpos, double ypos);
@@ -57,6 +58,7 @@ private:
     bool wentThroughPortal(const vec3& plane, const vec3& center, const float& size) const;
     void bluePortal();
     void redPortal();
+    int foundCoin(const std::vector<PlanetData>& planets);
 
 private:
     bool prevWouldHideCursor = false;
@@ -106,6 +108,7 @@ private:
     int iPortalClosest1 = -1, iPortalClosest2 = -1;
     vec3 dposForPortal1{}, dposForPortal2{};
     vec3 oldClosestPosForPortal1{}, oldClosestPosForPortal2{};
+    int pickedUpCoins; // is a bitmask (bcz there are < 32 coins)
 };
 
 #endif // CAMERA_H

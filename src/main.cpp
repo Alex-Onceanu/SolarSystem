@@ -221,6 +221,14 @@ void mainloop()
     glUniform1f(glGetUniformLocation(program ,"portalSize2"), portalSize2);
     glUniformMatrix3fv(glGetUniformLocation(program ,"portalBasis1"), 1, false, pb1);
     glUniformMatrix3fv(glGetUniformLocation(program ,"portalBasis2"), 1, false, pb2);
+    
+    int pickedUpCoins = camera->getPickedUpCoins();
+    char nm[] = "pickedUpCoins[o]";
+    for(int i = 0; i < 8; i++)
+    {
+        nm[14] = '0' + i;
+        glUniform1i(glGetUniformLocation(program, nm),pickedUpCoins & (1 << i));
+    }
 
 
     // Main render pass @here

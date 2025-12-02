@@ -252,6 +252,7 @@ Camera::Camera(vec3 spawn)
     emscripten_set_mouseup_callback("#canvas", nullptr, EM_TRUE, mouse_button_callback);
 
     emscripten_set_mousedown_callback("#canvas", nullptr, EM_TRUE, request_pointerlock);
+    pickedUpCoins = 0x00;
 }
 
 
@@ -315,6 +316,17 @@ float rayCircle(vec3 rayPos, vec3 rayDir, vec3 cPos, vec3 cPlane, float radius)
     return t;
 }
 
+int Camera::foundCoin(const std::vector<PlanetData>& planets)
+{
+    vec3 rd = (pos - oldPos).normalize();
+    for(int i = 0; i < planets.size(); i++)
+    {
+        if(((pickedUpCoins & (1 << i)) == 0) && (planets[i].p + vec3(planets[i].radius + 80., 0., 0.) - pos).length() <= 24.)
+            return i;
+    }
+    return -1;
+}
+
 bool Camera::wentThroughPortal(const vec3& plane, const vec3& center, const float& size) const
 {
     if((plane.dot(oldPos - center) >= 0.) == (plane.dot(pos - center) >= 0.)) return false;
@@ -372,6 +384,13 @@ void Camera::update(float& dt, const float& __time, const std::vector<PlanetData
     if(iPortalClosest2 != -1) portalPos2 += dposForPortal2;
 
     updateMouse();
+
+    int whichCoin = foundCoin(planets);
+    if(whichCoin != -1)
+    {
+        emscripten_run_script("foundCoin()");
+        pickedUpCoins |= (1 << whichCoin);
+    }
 
     if(rewinding and not timeline->empty())
     {

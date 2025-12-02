@@ -6,7 +6,7 @@ out vec4 outColor;
 
 #define NB_PLANETS 8
 
-uniform float time;
+uniform float mtime;
 uniform float fov;
 uniform float aspectRatio;
 
@@ -54,6 +54,9 @@ uniform vec3 portalPlane1, portalPlane2;
 uniform vec3 portalPos1, portalPos2;
 uniform float portalSize1, portalSize2;
 uniform mat3 portalBasis1, portalBasis2;
+
+uniform bool pickedUpCoins[NB_PLANETS];
+
 
 // _____________________________________________ UTILITY FUNCTIONS _____________________________________________________
 
@@ -167,7 +170,7 @@ vec3 background(vec3 d)
     // now we can use the seed to offset the stars for a more "natural" look
     vec2 a = inverseSF(normalize(nd + starsDisplacement * (-1. + 2. * randVector)));
 
-    float dst = (starSize + starSizeVariation * rand1 + starFlickering * rand2 * pow(sin(3. * time * rand3), 5.)) * a.y;
+    float dst = (starSize + starSizeVariation * rand1 + starFlickering * rand2 * pow(sin(3. * mtime * rand3), 5.)) * a.y;
 
     float glow = 1. / (0.001 + dst * dst);
     vec3 clr = 1. + 0.6 * randVector;
@@ -190,7 +193,7 @@ mat3 changeOfBasis(vec3 target, vec3 up)
 
 // _____________________________________________________ WATER ________________________________________________________
 
-// sum of sines based on dot with 4 "splashes" and time
+// sum of sines based on dot with 4 "splashes" and mtime
 // these are not spherical sines though, so the result might look a bit odd
 float waveHeight(vec3 gwhere)
 {
@@ -203,10 +206,10 @@ float waveHeight(vec3 gwhere)
     float A1 = 0.16 * 0.5 * (1. + k1 * k1);
     float A2 = 0.09 * 0.5 * (1. + k2 * k2);
     float A3 = 0.05 * 0.5 * (1. + k3 * k3);   
-    return  waveAmp *(A0 * (1. + sin(13. * k0 + 0.9 * time))
-                    + A1 * (1. + sin(16. * k1 + 1.2 * time))
-                    + A2 * (1. + sin(30. * k2 + 3.4 * time))
-                    + A3 * (1. + sin(45. * k3 + 6.0 * time))); 
+    return  waveAmp *(A0 * (1. + sin(13. * k0 + 0.9 * mtime))
+                    + A1 * (1. + sin(16. * k1 + 1.2 * mtime))
+                    + A2 * (1. + sin(30. * k2 + 3.4 * mtime))
+                    + A3 * (1. + sin(45. * k3 + 6.0 * mtime))); 
 }
 
 // derivative of waveHeight by central difference
@@ -454,6 +457,21 @@ vec3 raytraceMap(vec3 rayDir, vec3 rayPos)
                 float md = (1. / sunRadius) * raySphereMinDist(r0, rd, sunPos, sunRadius).x + 1.;
                 float light = smoothstep(0.0, 1.0, 1.0 / (md * md));
                 argmin = light * sunColor + (1.0 - light) * argmin;
+            }
+        }
+
+        // coins @here
+        for(int i = 0; i < 8; i++)
+        {
+            if(pickedUpCoins[i] == true) continue;
+
+            vec3 coinPlane = vec3(0., 1., 0.);
+            coinPlane.yz *= rot2D(mtime);
+            float tCoin = rayCircle(r0, rd, planetPos[i] + vec3(uPlanetRadius[i] + 80., 0., 0.), coinPlane, 14.);
+            if(tCoin <= tMin && tCoin >= 0. && tCoin < 1000.)
+            {
+                tMin = tCoin;
+                argmin = vec3(1.0, 1.0, 0.0);
             }
         }
 
